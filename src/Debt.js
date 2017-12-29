@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
+import './Debt.css';
 import { Accordion, Button, Checkbox, Divider, Form, Header, Icon, Segment, Table } from 'semantic-ui-react';
 import { CurrencyFormatter, CurrencyFormField, PercentageFormatter, PercentageFormField } from './Formatting.js';
+import { DebtHandler } from './DebtHandler.js';
 
 class DebtCalculator extends Component {
     constructor(props) {
@@ -17,6 +19,12 @@ class DebtCalculator extends Component {
     }
 
     handleAddDebt(e, debt) {
+        if (!debt.minimumPayment) {
+            debt.minimumPayment = DebtHandler.calculateMinimumPayment(debt.balance, debt.interestRate, debt.debtLife);
+        } else if (!debt.debtLife) {
+            debt.debtLife = DebtHandler.calculateDebtLife(debt.balance, debt.interestRate, debt.minimumPayment);
+        }
+
         let debts = this.state.debts.slice();
         debts.push(debt);
         this.setState({ debts: debts });
@@ -25,7 +33,9 @@ class DebtCalculator extends Component {
     render() {
         return (
             <div>
-                <DebtHeader title="Debt Calculator" subHeading="Calculate how long until you are DEBT FREE!" iconName="calculator" />
+                <Segment>
+                    <DebtHeader title="Debt Calculator" subHeading="Calculate how long until you are DEBT FREE!" iconName="calculator" />
+                </Segment>
                 <Segment>
                     <Accordion panels={[
                         { title: 'Add Debt', content: { key: 'addDebt', content: (<DebtForm onAddDebt={(e, d) => this.handleAddDebt(e, d)} />) } }
