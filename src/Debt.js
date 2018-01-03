@@ -170,6 +170,9 @@ function DebtList(props) {
               )
             }
         </Table.Body>
+        <Table.Footer>
+            <DebtFooter debts={props.debts} />
+        </Table.Footer>
       </Table>
     );
 }
@@ -198,6 +201,34 @@ class Debt extends Component {
                 <Table.Cell>{this.props.payoffOrder}</Table.Cell>
             </Table.Row>
         );
+    }
+}
+
+class DebtFooter extends Component {
+
+    render() {
+        let balance = 0, minimumPayment = 0, debtLife = 0, count = 0;
+
+        this.props.debts.forEach((debt) => {
+            if (!debt.excluded) {
+                balance += debt.balance;
+                minimumPayment += debt.minimumPayment;
+                debtLife = Math.max(debtLife, Math.ceil(debt.debtLife));
+                count++;
+            }
+        });
+
+        return (
+            <Table.Row>
+                <Table.HeaderCell>Total</Table.HeaderCell>
+                <Table.HeaderCell><CurrencyFormatter value={balance} /></Table.HeaderCell>
+                <Table.HeaderCell><PercentageFormatter value={.08} /></Table.HeaderCell>
+                <Table.HeaderCell><CurrencyFormatter value={minimumPayment} /></Table.HeaderCell>
+                <Table.HeaderCell>{debtLife}</Table.HeaderCell>
+                <Table.HeaderCell>{count}</Table.HeaderCell>
+                <Table.HeaderCell></Table.HeaderCell>
+            </Table.Row>
+            );
     }
 }
 
