@@ -2,31 +2,49 @@ import React, { Component } from 'react';
 import './Debt.css';
 import { Accordion, Button, Checkbox, Divider, Form, Header, Icon, Segment, Table } from 'semantic-ui-react';
 import { CurrencyFormatter, CurrencyFormField, PercentageFormatter, PercentageFormField } from './Formatting.js';
-import { DebtHandler } from './DebtHandler.js';
+import { DebtCalculator } from './DebtCalculator.js';
 
-class DebtCalculator extends Component {
+class DebtCalculatorApp extends Component {
     constructor(props) {
+        let debts = [
+            { name: "Home Depot", balance: 1200.00, interestRate: .085, minimumPayment: 54.00, debtLife: 24.265, excluded: false, payoffOrder: "1", amortization: [] },
+            { name: "Medical Bill", balance: 1800.00, interestRate: 0.0, minimumPayment: 200.00, debtLife: 12, excluded: true, payoffOrder: "2", amortization: [] },
+            { name: "American Express", balance: 5700.00, interestRate: .12, minimumPayment: 102.00, debtLife: 82.239, excluded: false, payoffOrder: "3", amortization: [] }
+        ];
+
         super(props);
 
+        for (let i = 0, length = debts.length; i < length; i++) {
+            debts[i].amortization = DebtCalculator.buildAmortization(debts[i].balance, debts[i].interestRate, debts[i].minimumPayment, debts[i].debtLife);
+        }
+
         this.state = {
-            debts: [
-                { name: "Home Depot", balance: 1200.00, interestRate: .085, minimumPayment: 54.00, debtLife: 24.265, excluded: false, customSort: "1" },
-                { name: "Medical Bill", balance: 1800.00, interestRate: 0.0, minimumPayment: 200.00, debtLife: 12, excluded: true, customSort: "2" },
-                { name: "American Express", balance: 5700.00, interestRate: .12, minimumPayment: 102.00, debtLife: 82.239, excluded: false, customSort: "3" }
-            ],
+            debts: debts,
             enableSnowball: false
         };
+
+        this.handleAddDebt = this.handleAddDebt.bind(this);
+        this.handleExcludedChanged = this.handleExcludedChanged.bind(this);
     }
 
     handleAddDebt(e, debt) {
         if (!debt.minimumPayment) {
-            debt.minimumPayment = DebtHandler.calculateMinimumPayment(debt.balance, debt.interestRate, debt.debtLife);
+            debt.minimumPayment = DebtCalculator.calculateMinimumPayment(debt.balance, debt.interestRate, debt.debtLife);
         } else if (!debt.debtLife) {
-            debt.debtLife = DebtHandler.calculateDebtLife(debt.balance, debt.interestRate, debt.minimumPayment);
+            debt.debtLife = DebtCalculator.calculateDebtLife(debt.balance, debt.interestRate, debt.minimumPayment);
         }
+
+        debt.amortization = DebtCalculator.buildAmortization(debt.balance, debt.interestRate, debt.minimumPayment, debt.debtLife);
 
         let debts = this.state.debts.slice();
         debts.push(debt);
+        this.setState({ debts: debts });
+    }
+
+    handleExcludedChanged(e, data) {
+        let debts = this.state.debts.slice();
+        let debt = debts.find((debt) => { return debt.name === data.debtName; })
+        debt.excluded = !debt.excluded;
         this.setState({ debts: debts });
     }
 
@@ -38,11 +56,13 @@ class DebtCalculator extends Component {
                 </Segment>
                 <Segment>
                     <Accordion panels={[
-                        { title: 'Add Debt', content: { key: 'addDebt', content: (<DebtForm onAddDebt={(e, d) => this.handleAddDebt(e, d)} />) } }
+                        { title: 'Add Debt', content: { key: 'addDebt', content: (<DebtForm onAddDebt={this.handleAddDebt} />) } }
                     ] } />
                 </Segment>
                 <Divider horizontal />
-                <DebtList debts={this.state.debts}/>
+                <DebtList debts={this.state.debts} onExcludedChanged={this.handleExcludedChanged} />
+                <Divider horizontal />
+                <DebtPayoffSchedule debts={this.state.debts} />
             </div>
         );
     }
@@ -60,132 +80,6 @@ function DebtHeader(props) {
     );
 }
 
-function DebtList(props) {
-    return (
-      <Table celled>
-        <Table.Header>
-          <Table.Row>
-            <Table.HeaderCell>Name</Table.HeaderCell>
-            <Table.HeaderCell>Balance</Table.HeaderCell>
-            <Table.HeaderCell>Interest Rate</Table.HeaderCell>
-            <Table.HeaderCell>Minimum Payment</Table.HeaderCell>
-            <Table.HeaderCell>Life of Debt</Table.HeaderCell>
-            <Table.HeaderCell>Exclude</Table.HeaderCell>
-            <Table.HeaderCell>Custom Sort</Table.HeaderCell>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
-            {
-              props.debts.map((debt) =>
-                <Debt key={debt.name} name={debt.name} balance={debt.balance}
-                  interestRate={debt.interestRate} minimumPayment={debt.minimumPayment}
-                  debtLife={debt.debtLife} excluded={debt.excluded} customSort={debt.customSort} />
-              )
-            }
-        </Table.Body>
-      </Table>
-    );
-}
-
-function Debt(props) {
-    return (
-      <Table.Row>
-        <Table.Cell>{props.name}</Table.Cell>
-        <Table.Cell><CurrencyFormatter value={props.balance} /></Table.Cell>
-        <Table.Cell><PercentageFormatter value={props.interestRate} /></Table.Cell>
-        <Table.Cell><CurrencyFormatter value={props.minimumPayment} /></Table.Cell>
-        <Table.Cell>{Math.ceil(props.debtLife)}</Table.Cell>
-        <Table.Cell><Checkbox toggle checked={props.excluded} /></Table.Cell>
-        <Table.Cell>{props.customSort}</Table.Cell>
-      </Table.Row>
-    );
-}
-
-/*class Debt extends Component {
-  constructor(props) {
-    super();
-
-    this[_name] = props.name;
-    this[_balance] = props.balance;
-    this[_minimumPayment] = props.minimumPayment;
-    this[_interestRate] = props.interestRate;
-    this[_debtLife] = props.debtLife;
-    this[_excluded] = props.excluded;
-    this[_customSort] = props.customSort;
-  }
-
-  get name() {
-      return this[_name];
-  }
-
-  set name(value) {
-      this[_name] = value;
-  }
-
-  get balance() {
-      return this[_balance];
-  }
-
-  set balance(value) {
-      this[_balance] = value;
-  }
-  
-  get interestRate() {
-      return this[_interestRate];
-  }
-
-  set interestRate(value) {
-      this[_interestRate] = value;
-  }
-  
-  get minimumPayment() {
-      return this[_minimumPayment];
-  }
-
-  set minimumPayment(value) {
-      this[_minimumPayment] = value;
-  }
-  
-  get debtLife() {
-      return this[_debtLife];
-  }
-
-  set debtLife(value) {
-      this[_debtLife] = value;
-  }
-  
-  get excluded() {
-      return this[_excluded];
-  }
-
-  set excluded(value) {
-      this[_excluded] = value;
-  }
-  
-  get customSort() {
-      return this[_customSort];
-  }
-
-  set customSort(value) {
-      this[_customSort] = value;
-  }
-  
-  render() {
-    return (
-      <Table.Row>
-        <Table.Cell>{this.name}</Table.Cell>
-        <Table.Cell><CurrencyFormatter value={this.balance} /></Table.Cell>
-        <Table.Cell><PercentageFormatter value={this.interestRate} /></Table.Cell>
-        <Table.Cell><CurrencyFormatter value={this.minimumPayment} /></Table.Cell>
-        <Table.Cell>{Math.ceil(this.debtLife)}</Table.Cell>
-        <Table.Cell><Checkbox toggle checked={this.excluded} /></Table.Cell>
-        <Table.Cell>{this.customSort}</Table.Cell>
-      </Table.Row>
-    );
-  }
-}
-*/
-
 class DebtForm extends Component {
     constructor(props) {
         super(props);
@@ -197,8 +91,11 @@ class DebtForm extends Component {
             interestRate: undefined,
             debtLife: undefined,
             excluded: undefined,
-            customSort: undefined
+            payoffOrder: undefined
         };
+
+        this.addDebt = this.addDebt.bind(this);
+        this.handleFormChange = this.handleFormChange.bind(this);
     }
 
     addDebt(e) {
@@ -229,28 +126,150 @@ class DebtForm extends Component {
         return (
             <Form>
                 <Form.Group>
-                    <Form.Input name="name" label="Name" placeholder="Name" onChange={ (e, d) => this.handleFormChange(e, d) } />
+                    <Form.Input name="name" label="Name" placeholder="Name" onChange={this.handleFormChange} />
                 </Form.Group>
                 <Form.Group>
-                    <CurrencyFormField name="balance" label="Balance" onChange={ (e, d) => this.handleFormChange(e, d) } />
-                    <PercentageFormField name="interestRate" label="Interest Rate" onChange={ (e, d) => this.handleFormChange(e, d) } />
+                    <CurrencyFormField name="balance" label="Balance" onChange={this.handleFormChange} />
+                    <PercentageFormField name="interestRate" label="Interest Rate" onChange={this.handleFormChange} />
                 </Form.Group>
                 <Form.Group>
-                    <CurrencyFormField name="minimumPayment" label="Minimum Payment" onChange={ (e, d) => this.handleFormChange(e, d) } />
-                    <Form.Input name="debtLife" type="number" label="Life of Debt" placeholder="Life of debt" onChange={ (e, d) => this.handleFormChange(e, d) } />
+                    <CurrencyFormField name="minimumPayment" label="Minimum Payment" onChange={this.handleFormChange} />
+                    <Form.Input name="debtLife" type="number" label="Life of Debt" placeholder="Life of debt" onChange={this.handleFormChange} />
                 </Form.Group>
                 <Form.Group>
                     <Form.Field>
                         <label>Exclude</label>
-                        <Checkbox name="excluded" toggle onChange={ (e, d) => this.handleFormChange(e, d) } />
+                        <Checkbox name="excluded" toggle onChange={this.handleFormChange} />
                     </Form.Field>
-                    <Form.Input name="customSort" type="number" label="Custom Sort" placeholder="Custom Sort" onChange={ (e, d) => this.handleFormChange(e, d) } />
-                    <Form.Field label="Exclude" control={Checkbox} toggle fitted={true} />
+                    <Form.Input name="payoffOrder" type="number" label="Payoff Order" placeholder="Payoff Order" onChange={this.handleFormChange} />
                 </Form.Group>
-                <Button type='submit' onClick={(e) => this.addDebt(e)}>Add</Button>
-            </Form> 
+                <Button type='submit' onClick={this.addDebt}>Add</Button>
+            </Form>
         );
     }
 }
 
-export default DebtCalculator;
+function DebtList(props) {
+    return (
+      <Table celled>
+        <Table.Header>
+          <Table.Row>
+            <Table.HeaderCell>Name</Table.HeaderCell>
+            <Table.HeaderCell>Balance</Table.HeaderCell>
+            <Table.HeaderCell>Interest Rate</Table.HeaderCell>
+            <Table.HeaderCell>Minimum Payment</Table.HeaderCell>
+            <Table.HeaderCell>Life of Debt</Table.HeaderCell>
+            <Table.HeaderCell>Exclude</Table.HeaderCell>
+            <Table.HeaderCell>Payoff Order</Table.HeaderCell>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+            {
+              props.debts.map((debt) =>
+                <Debt key={debt.name} {...debt} onExcludedChanged={props.onExcludedChanged} />
+              )
+            }
+        </Table.Body>
+      </Table>
+    );
+}
+
+class Debt extends Component {
+    constructor(props) {
+        super(props);
+
+        this.handleExcludedChanged = this.handleExcludedChanged.bind(this);
+    }
+
+    handleExcludedChanged(e, data) {
+        data.debtName = this.props.name;
+        this.props.onExcludedChanged(e, data);
+    }
+
+    render() {
+        return (
+            <Table.Row>
+                <Table.Cell>{this.props.name}</Table.Cell>
+                <Table.Cell><CurrencyFormatter value={this.props.balance} /></Table.Cell>
+                <Table.Cell><PercentageFormatter value={this.props.interestRate} /></Table.Cell>
+                <Table.Cell><CurrencyFormatter value={this.props.minimumPayment} /></Table.Cell>
+                <Table.Cell>{Math.ceil(this.props.debtLife)}</Table.Cell>
+                <Table.Cell><Checkbox toggle checked={this.props.excluded} onChange={this.handleExcludedChanged} /></Table.Cell>
+                <Table.Cell>{this.props.payoffOrder}</Table.Cell>
+            </Table.Row>
+        );
+    }
+}
+
+class DebtPayoffSchedule extends Component {
+    generateAmortization(debts) {
+        let includedDebts = debts.filter((debt) => !debt.excluded).slice();
+        let amortization = [];
+
+        if (includedDebts.length > 0) {
+            amortization = JSON.parse(JSON.stringify(includedDebts[0].amortization));
+
+            let finalAmortizationLength = amortization.length;
+            let debtsLength = includedDebts.length;
+
+            for (let i = 1, j = 0, currentAmortizationLength = 0; i < debtsLength; i++) {
+
+                currentAmortizationLength = includedDebts[i].amortization.length;
+
+                for (j = 0; j < currentAmortizationLength && j < finalAmortizationLength; j++) {
+                    amortization[j].paymentNumber = includedDebts[i].amortization[j].paymentNumber;
+                    amortization[j].beginningBalance = amortization[j].beginningBalance + includedDebts[i].amortization[j].beginningBalance;
+                    amortization[j].interest += includedDebts[i].amortization[j].interest;
+                    amortization[j].principal += includedDebts[i].amortization[j].principal;
+                    amortization[j].endingBalance += includedDebts[i].amortization[j].endingBalance;
+                }
+
+                if (currentAmortizationLength > finalAmortizationLength) {
+                    amortization = amortization.concat(JSON.parse(JSON.stringify(includedDebts[i].amortization.slice(j))));
+                    finalAmortizationLength = currentAmortizationLength;
+                }
+            }
+        }
+
+        return amortization;
+    }
+
+    render() {
+        const amortization = this.generateAmortization(this.props.debts);
+
+        return (
+            <Table celled>
+                <Table.Header>
+                    <Table.Row>
+                        <Table.HeaderCell>Payment #</Table.HeaderCell>
+                        <Table.HeaderCell>Beginning Balance</Table.HeaderCell>
+                        <Table.HeaderCell>Interest</Table.HeaderCell>
+                        <Table.HeaderCell>Principal</Table.HeaderCell>
+                        <Table.HeaderCell>Ending Balance</Table.HeaderCell>
+                    </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                    {
+                        amortization.map((payment) =>
+                            <DebtPayment key={payment.paymentNumber} {...payment} />
+                        )
+                    }
+                </Table.Body>
+            </Table>
+        );
+    }
+}
+
+function DebtPayment(props) {
+    return (
+        <Table.Row>
+            <Table.Cell>{props.paymentNumber}</Table.Cell>
+            <Table.Cell><CurrencyFormatter value={props.beginningBalance} /></Table.Cell>
+            <Table.Cell><CurrencyFormatter value={props.interest} /></Table.Cell>
+            <Table.Cell><CurrencyFormatter value={props.principal} /></Table.Cell>
+            <Table.Cell><CurrencyFormatter value={props.endingBalance} /></Table.Cell>
+        </Table.Row>
+    );
+}
+
+export default DebtCalculatorApp;
