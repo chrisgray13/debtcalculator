@@ -8,8 +8,10 @@ class DebtCalculatorApp extends Component {
     constructor(props) {
         let debts = [
             { name: "Home Depot", balance: 1200.00, interestRate: .085, minimumPayment: 54.00, debtLife: 24.265, excluded: false, payoffOrder: "1", amortization: [] },
-            { name: "Medical Bill", balance: 1800.00, interestRate: 0.0, minimumPayment: 200.00, debtLife: 12, excluded: true, payoffOrder: "2", amortization: [] },
-            { name: "American Express", balance: 5700.00, interestRate: .12, minimumPayment: 102.00, debtLife: 82.239, excluded: false, payoffOrder: "3", amortization: [] }
+            { name: "Medical Bill", balance: 3000.00, interestRate: 0.0, minimumPayment: 250.00, debtLife: 12, excluded: false, payoffOrder: "2", amortization: [] },
+            { name: "American Express", balance: 5700.00, interestRate: .12, minimumPayment: 102.00, debtLife: 82.239, excluded: false, payoffOrder: "3", amortization: [] },
+            { name: "Student Loan", balance: 12500.00, interestRate: 0.08, minimumPayment: 151.66, debtLife: 120, excluded: false, payoffOrder: "4", amortization: [] },
+            { name: "Toyota", balance: 17800.00, interestRate: 0.15, minimumPayment:  617.05, debtLife: 36, excluded: false, payoffOrder: "5", amortization: [] }
         ];
 
         super(props);
@@ -25,6 +27,7 @@ class DebtCalculatorApp extends Component {
 
         this.handleAddDebt = this.handleAddDebt.bind(this);
         this.handleExcludedChanged = this.handleExcludedChanged.bind(this);
+        this.handleSnowballChanged = this.handleSnowballChanged.bind(this);
     }
 
     handleAddDebt(e, debt) {
@@ -48,9 +51,15 @@ class DebtCalculatorApp extends Component {
         this.setState({ debts: debts });
     }
 
+    handleSnowballChanged(e, data) {
+        let enableSnowball = this.state.enableSnowball;
+
+        this.setState({ enableSnowball: !enableSnowball });
+    }
+
     render() {
         return (
-            <div>
+            <Segment>
                 <Segment>
                     <DebtHeader title="Debt Calculator" subHeading="Calculate how long until you are DEBT FREE!" iconName="calculator" />
                 </Segment>
@@ -62,8 +71,11 @@ class DebtCalculatorApp extends Component {
                 <Divider horizontal />
                 <DebtList debts={this.state.debts} onExcludedChanged={this.handleExcludedChanged} />
                 <Divider horizontal />
-                <DebtPayoffSchedule debts={this.state.debts} />
-            </div>
+                <Segment>
+                    <Checkbox name="excluded" toggle checked={this.state.enableSnowball} label="Enable Snowball Payments" onChange={this.handleSnowballChanged} />
+                </Segment>
+                <DebtPayoffSchedule debts={this.state.debts} enableSnowball={this.state.enableSnowball} />
+            </Segment>
         );
     }
 }
@@ -233,40 +245,8 @@ class DebtFooter extends Component {
 }
 
 class DebtPayoffSchedule extends Component {
-    generateAmortization(debts) {
-        let includedDebts = debts.filter((debt) => !debt.excluded).slice();
-        let amortization = [];
-
-        if (includedDebts.length > 0) {
-            amortization = JSON.parse(JSON.stringify(includedDebts[0].amortization));
-
-            let finalAmortizationLength = amortization.length;
-            let debtsLength = includedDebts.length;
-
-            for (let i = 1, j = 0, currentAmortizationLength = 0; i < debtsLength; i++) {
-
-                currentAmortizationLength = includedDebts[i].amortization.length;
-
-                for (j = 0; j < currentAmortizationLength && j < finalAmortizationLength; j++) {
-                    amortization[j].paymentNumber = includedDebts[i].amortization[j].paymentNumber;
-                    amortization[j].beginningBalance = amortization[j].beginningBalance + includedDebts[i].amortization[j].beginningBalance;
-                    amortization[j].interest += includedDebts[i].amortization[j].interest;
-                    amortization[j].principal += includedDebts[i].amortization[j].principal;
-                    amortization[j].endingBalance += includedDebts[i].amortization[j].endingBalance;
-                }
-
-                if (currentAmortizationLength > finalAmortizationLength) {
-                    amortization = amortization.concat(JSON.parse(JSON.stringify(includedDebts[i].amortization.slice(j))));
-                    finalAmortizationLength = currentAmortizationLength;
-                }
-            }
-        }
-
-        return amortization;
-    }
-
     render() {
-        const amortization = this.generateAmortization(this.props.debts);
+        const amortization = DebtCalculator.buildAmortization2(this.props.debts, this.props.enableSnowball);
 
         return (
             <Table celled>
@@ -276,6 +256,7 @@ class DebtPayoffSchedule extends Component {
                         <Table.HeaderCell>Beginning Balance</Table.HeaderCell>
                         <Table.HeaderCell>Interest</Table.HeaderCell>
                         <Table.HeaderCell>Principal</Table.HeaderCell>
+                        <Table.HeaderCell>Snowball Payment</Table.HeaderCell>
                         <Table.HeaderCell>Ending Balance</Table.HeaderCell>
                     </Table.Row>
                 </Table.Header>
@@ -298,6 +279,7 @@ function DebtPayment(props) {
             <Table.Cell><CurrencyFormatter value={props.beginningBalance} /></Table.Cell>
             <Table.Cell><CurrencyFormatter value={props.interest} /></Table.Cell>
             <Table.Cell><CurrencyFormatter value={props.principal} /></Table.Cell>
+            <Table.Cell><CurrencyFormatter value={props.snowballPayment} /></Table.Cell>
             <Table.Cell><CurrencyFormatter value={props.endingBalance} /></Table.Cell>
         </Table.Row>
     );
