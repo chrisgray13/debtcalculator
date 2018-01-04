@@ -22,12 +22,15 @@ class DebtCalculatorApp extends Component {
 
         this.state = {
             debts: debts,
-            enableSnowball: false
+            enableSnowball: false,
+            sortedColumn: undefined,
+            sortDirection: 0
         };
 
         this.handleAddDebt = this.handleAddDebt.bind(this);
         this.handleIncludedChanged = this.handleIncludedChanged.bind(this);
         this.handleSnowballChanged = this.handleSnowballChanged.bind(this);
+        this.handleSortByColumn = this.handleSortByColumn.bind(this);
     }
 
     handleAddDebt(e, debt) {
@@ -57,6 +60,31 @@ class DebtCalculatorApp extends Component {
         this.setState({ enableSnowball: !enableSnowball });
     }
 
+    handleSortByColumn(e, data) {
+        let currentSortedColumn = this.state.sortedColumn;
+        let sortDirection = this.state.sortDirection;
+
+        sortDirection = (data.sortedColumn === currentSortedColumn) ? (sortDirection + 1) % 3 : 1;
+
+        let debts = this.state.debts.slice();
+
+        debts.sort((a, b) => {
+            if (sortDirection === 2) {
+                return b[data.sortedColumn] - a[data.sortedColumn];
+            } else if (sortDirection === 1) {
+                return a[data.sortedColumn] - b[data.sortedColumn];
+            } else {
+                return a["payoffOrder"] - b["payoffOrder"];
+            }
+        });
+
+        this.setState({
+            sortedColumn: data.sortedColumn,
+            sortDirection: sortDirection,
+            debts: debts
+        });
+    }
+
     render() {
         return (
             <Segment>
@@ -69,7 +97,8 @@ class DebtCalculatorApp extends Component {
                     ] } />
                 </Segment>
                 <Divider horizontal />
-                <DebtList debts={this.state.debts} onIncludedChanged={this.handleIncludedChanged} />
+                <DebtList debts={this.state.debts} sortedColumn={this.state.sortedColumn} sortDirection={this.state.sortDirection}
+                    onSortByColumn={this.handleSortByColumn} onIncludedChanged={this.handleIncludedChanged} />
                 <Divider horizontal />
                 <Segment>
                     <Checkbox name="included" toggle checked={this.state.enableSnowball} label="Enable Snowball Payments" onChange={this.handleSnowballChanged} />
@@ -102,7 +131,7 @@ class DebtForm extends Component {
             minimumPayment: undefined,
             interestRate: undefined,
             debtLife: undefined,
-            included: undefined,
+            included: true,
             payoffOrder: undefined
         };
 
@@ -121,16 +150,16 @@ class DebtForm extends Component {
     handleFormChange(e, data) {
         let value = undefined;
 
-        if (e.target.type === "checkbox") {
-            value = e.target.checked;
-        } else if (e.target.type === "number") {
-            value = parseFloat(e.target.value);
+        if (data.type === "checkbox") {
+            value = data.checked;
+        } else if (data.type === "number") {
+            value = parseFloat(data.value);
         } else {
-            value = e.target.value;
+            value = data.value;
         }
 
         this.setState({
-            [e.target.name]: value
+            [data.name]: value
         });
     }
 
@@ -152,7 +181,7 @@ class DebtForm extends Component {
                     <Form.Input name="payoffOrder" type="number" label="Payoff Order" placeholder="Payoff Order" onChange={this.handleFormChange} />
                     <Form.Field>
                         <label>Include</label>
-                        <Checkbox name="included" toggle onChange={this.handleFormChange} />
+                        <Checkbox name="included" toggle checked={this.state.included} onChange={this.handleFormChange} />
                     </Form.Field>
                 </Form.Group>
                 <Button type='submit' onClick={this.addDebt}>Add</Button>
@@ -161,17 +190,37 @@ class DebtForm extends Component {
     }
 }
 
+class SortableColumnHeader extends Component {
+
+    constructor(props) {
+        super(props);
+
+        this.handleClick = this.handleClick.bind(this);
+    }
+
+    handleClick(e) {
+        this.props.onSortByColumn(e, { sortedColumn: this.props.name });
+    }
+
+    render() {
+        return (
+            <Table.HeaderCell sorted={((this.props.sortDirection === 0) || (this.props.sortedColumn !== this.props.name)) ? null : ((this.props.sortDirection === 1) ? "ascending" : "descending")}
+                onClick={this.handleClick}>{this.props.children}</Table.HeaderCell>
+        );
+    }
+}
+
 function DebtList(props) {
     return (
-      <Table celled>
+      <Table sortable celled>
         <Table.Header>
           <Table.Row>
             <Table.HeaderCell>Name</Table.HeaderCell>
-            <Table.HeaderCell>Balance</Table.HeaderCell>
-            <Table.HeaderCell>Interest Rate</Table.HeaderCell>
+            <SortableColumnHeader name="balance" sortedColumn={props.sortedColumn} sortDirection={props.sortDirection} onSortByColumn={props.onSortByColumn}>Balance</SortableColumnHeader>
+            <SortableColumnHeader name="interestRate" sortedColumn={props.sortedColumn} sortDirection={props.sortDirection} onSortByColumn={props.onSortByColumn}>Interest Rate</SortableColumnHeader>
             <Table.HeaderCell>Minimum Payment</Table.HeaderCell>
             <Table.HeaderCell>Life of Debt</Table.HeaderCell>
-            <Table.HeaderCell>Payoff Order</Table.HeaderCell>
+            <SortableColumnHeader name="payoffOrder" sortedColumn={props.sortedColumn} sortDirection={props.sortDirection} onSortByColumn={props.onSortByColumn}>Payoff Order</SortableColumnHeader>
             <Table.HeaderCell>Include</Table.HeaderCell>
           </Table.Row>
         </Table.Header>
@@ -196,9 +245,8 @@ class Debt extends Component {
         this.handleIncludedChanged = this.handleIncludedChanged.bind(this);
     }
 
-    handleIncludedChanged(e, data) {
-        data.debtName = this.props.name;
-        this.props.onIncludedChanged(e, data);
+    handleIncludedChanged(e) {
+        this.props.onIncludedChanged(e, { debtName: this.props.name });
     }
 
     render() {
