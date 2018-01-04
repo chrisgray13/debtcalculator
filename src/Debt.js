@@ -246,7 +246,7 @@ class DebtFooter extends Component {
 
 class DebtPayoffSchedule extends Component {
     render() {
-        const amortization = DebtCalculator.buildAmortization2(this.props.debts, this.props.enableSnowball);
+        const amortization = DebtCalculator.buildAggregateAmortization(this.props.debts, this.props.enableSnowball);
 
         return (
             <Table celled>

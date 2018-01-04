@@ -43,7 +43,7 @@ export class DebtCalculator {
         return amortization;
     }
 
-    static buildAmortization2(debts, enableSnowball) {
+    static buildAggregateAmortization(debts, enableSnowball) {
         let i = 0, debtCount = debts.length, totalPayment = 0.0, maxDebtLife = 0.0;
         let debtData = [];
 
@@ -115,7 +115,7 @@ export class DebtCalculator {
         return amortization;
     }
 
-    static aggregateAmortizations(debts, enableSnowball) {
+    static aggregateAmortizations(debts) {
         let includedDebts = debts.filter((debt) => !debt.excluded).slice();
         let amortization = [];
 
@@ -146,6 +146,4 @@ export class DebtCalculator {
 
         return amortization;
     }
-
-
 }
