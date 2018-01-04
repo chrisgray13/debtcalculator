@@ -61,7 +61,7 @@ class DebtCalculatorApp extends Component {
         return (
             <Segment>
                 <Segment>
-                    <DebtHeader title="Debt Calculator" subHeading="Calculate how long until you are DEBT FREE!" iconName="calculator" />
+                    <DebtHeading title="Debt Calculator" subHeading="Calculate how long until you are DEBT FREE!" iconName="calculator" />
                 </Segment>
                 <Segment>
                     <Accordion panels={[
@@ -80,7 +80,7 @@ class DebtCalculatorApp extends Component {
     }
 }
 
-function DebtHeader(props) {
+function DebtHeading(props) {
     return (
         <Header as="h2" icon textAlign="center">
             <Icon name={props.iconName} />
