@@ -48,7 +48,7 @@ export class DebtCalculator {
         let debtData = [];
 
         for (; i < debtCount; i++) {
-            if (!debts[i].excluded) {
+            if (debts[i].included) {
                 totalPayment += debts[i].minimumPayment;
                 maxDebtLife = Math.max(debts[i].debtLife, maxDebtLife);
 
@@ -116,7 +116,7 @@ export class DebtCalculator {
     }
 
     static aggregateAmortizations(debts) {
-        let includedDebts = debts.filter((debt) => !debt.excluded).slice();
+        let includedDebts = debts.filter((debt) => debt.included).slice();
         let amortization = [];
 
         if (includedDebts.length > 0) {

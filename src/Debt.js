@@ -7,11 +7,11 @@ import { DebtCalculator } from './DebtCalculator.js';
 class DebtCalculatorApp extends Component {
     constructor(props) {
         let debts = [
-            { name: "Home Depot", balance: 1200.00, interestRate: .085, minimumPayment: 54.00, debtLife: 24.265, excluded: false, payoffOrder: "1", amortization: [] },
-            { name: "Medical Bill", balance: 3000.00, interestRate: 0.0, minimumPayment: 250.00, debtLife: 12, excluded: false, payoffOrder: "2", amortization: [] },
-            { name: "American Express", balance: 5700.00, interestRate: .12, minimumPayment: 102.00, debtLife: 82.239, excluded: false, payoffOrder: "3", amortization: [] },
-            { name: "Student Loan", balance: 12500.00, interestRate: 0.08, minimumPayment: 151.66, debtLife: 120, excluded: false, payoffOrder: "4", amortization: [] },
-            { name: "Toyota", balance: 17800.00, interestRate: 0.15, minimumPayment:  617.05, debtLife: 36, excluded: false, payoffOrder: "5", amortization: [] }
+            { name: "Home Depot", balance: 1200.00, interestRate: .085, minimumPayment: 54.00, debtLife: 24.265, included: true, payoffOrder: "1", amortization: [] },
+            { name: "Medical Bill", balance: 3000.00, interestRate: 0.0, minimumPayment: 250.00, debtLife: 12, included: true, payoffOrder: "2", amortization: [] },
+            { name: "American Express", balance: 5700.00, interestRate: .12, minimumPayment: 102.00, debtLife: 82.239, included: true, payoffOrder: "3", amortization: [] },
+            { name: "Student Loan", balance: 12500.00, interestRate: 0.08, minimumPayment: 151.66, debtLife: 120, included: true, payoffOrder: "4", amortization: [] },
+            { name: "Toyota", balance: 17800.00, interestRate: 0.15, minimumPayment:  617.05, debtLife: 36, included: true, payoffOrder: "5", amortization: [] }
         ];
 
         super(props);
@@ -26,7 +26,7 @@ class DebtCalculatorApp extends Component {
         };
 
         this.handleAddDebt = this.handleAddDebt.bind(this);
-        this.handleExcludedChanged = this.handleExcludedChanged.bind(this);
+        this.handleIncludedChanged = this.handleIncludedChanged.bind(this);
         this.handleSnowballChanged = this.handleSnowballChanged.bind(this);
     }
 
@@ -44,10 +44,10 @@ class DebtCalculatorApp extends Component {
         this.setState({ debts: debts });
     }
 
-    handleExcludedChanged(e, data) {
+    handleIncludedChanged(e, data) {
         let debts = this.state.debts.slice();
         let debt = debts.find((debt) => { return debt.name === data.debtName; })
-        debt.excluded = !debt.excluded;
+        debt.included = !debt.included;
         this.setState({ debts: debts });
     }
 
@@ -69,10 +69,10 @@ class DebtCalculatorApp extends Component {
                     ] } />
                 </Segment>
                 <Divider horizontal />
-                <DebtList debts={this.state.debts} onExcludedChanged={this.handleExcludedChanged} />
+                <DebtList debts={this.state.debts} onIncludedChanged={this.handleIncludedChanged} />
                 <Divider horizontal />
                 <Segment>
-                    <Checkbox name="excluded" toggle checked={this.state.enableSnowball} label="Enable Snowball Payments" onChange={this.handleSnowballChanged} />
+                    <Checkbox name="included" toggle checked={this.state.enableSnowball} label="Enable Snowball Payments" onChange={this.handleSnowballChanged} />
                 </Segment>
                 <DebtPayoffSchedule debts={this.state.debts} enableSnowball={this.state.enableSnowball} />
             </Segment>
@@ -102,7 +102,7 @@ class DebtForm extends Component {
             minimumPayment: undefined,
             interestRate: undefined,
             debtLife: undefined,
-            excluded: undefined,
+            included: undefined,
             payoffOrder: undefined
         };
 
@@ -149,11 +149,11 @@ class DebtForm extends Component {
                     <Form.Input name="debtLife" type="number" label="Life of Debt" placeholder="Life of debt" onChange={this.handleFormChange} />
                 </Form.Group>
                 <Form.Group>
-                    <Form.Field>
-                        <label>Exclude</label>
-                        <Checkbox name="excluded" toggle onChange={this.handleFormChange} />
-                    </Form.Field>
                     <Form.Input name="payoffOrder" type="number" label="Payoff Order" placeholder="Payoff Order" onChange={this.handleFormChange} />
+                    <Form.Field>
+                        <label>Include</label>
+                        <Checkbox name="included" toggle onChange={this.handleFormChange} />
+                    </Form.Field>
                 </Form.Group>
                 <Button type='submit' onClick={this.addDebt}>Add</Button>
             </Form>
@@ -171,14 +171,14 @@ function DebtList(props) {
             <Table.HeaderCell>Interest Rate</Table.HeaderCell>
             <Table.HeaderCell>Minimum Payment</Table.HeaderCell>
             <Table.HeaderCell>Life of Debt</Table.HeaderCell>
-            <Table.HeaderCell>Exclude</Table.HeaderCell>
             <Table.HeaderCell>Payoff Order</Table.HeaderCell>
+            <Table.HeaderCell>Include</Table.HeaderCell>
           </Table.Row>
         </Table.Header>
         <Table.Body>
             {
               props.debts.map((debt) =>
-                <Debt key={debt.name} {...debt} onExcludedChanged={props.onExcludedChanged} />
+                <Debt key={debt.name} {...debt} onIncludedChanged={props.onIncludedChanged} />
               )
             }
         </Table.Body>
@@ -193,12 +193,12 @@ class Debt extends Component {
     constructor(props) {
         super(props);
 
-        this.handleExcludedChanged = this.handleExcludedChanged.bind(this);
+        this.handleIncludedChanged = this.handleIncludedChanged.bind(this);
     }
 
-    handleExcludedChanged(e, data) {
+    handleIncludedChanged(e, data) {
         data.debtName = this.props.name;
-        this.props.onExcludedChanged(e, data);
+        this.props.onIncludedChanged(e, data);
     }
 
     render() {
@@ -209,8 +209,8 @@ class Debt extends Component {
                 <Table.Cell><PercentageFormatter value={this.props.interestRate} /></Table.Cell>
                 <Table.Cell><CurrencyFormatter value={this.props.minimumPayment} /></Table.Cell>
                 <Table.Cell>{Math.ceil(this.props.debtLife)}</Table.Cell>
-                <Table.Cell><Checkbox toggle checked={this.props.excluded} onChange={this.handleExcludedChanged} /></Table.Cell>
                 <Table.Cell>{this.props.payoffOrder}</Table.Cell>
+                <Table.Cell><Checkbox toggle checked={this.props.included} onChange={this.handleIncludedChanged} /></Table.Cell>
             </Table.Row>
         );
     }
@@ -222,7 +222,7 @@ class DebtFooter extends Component {
         let balance = 0, minimumPayment = 0, debtLife = 0, count = 0;
 
         this.props.debts.forEach((debt) => {
-            if (!debt.excluded) {
+            if (debt.included) {
                 balance += debt.balance;
                 minimumPayment += debt.minimumPayment;
                 debtLife = Math.max(debtLife, Math.ceil(debt.debtLife));
@@ -237,8 +237,8 @@ class DebtFooter extends Component {
                 <Table.HeaderCell><PercentageFormatter value={.08} /></Table.HeaderCell>
                 <Table.HeaderCell><CurrencyFormatter value={minimumPayment} /></Table.HeaderCell>
                 <Table.HeaderCell>{debtLife}</Table.HeaderCell>
-                <Table.HeaderCell>{count}</Table.HeaderCell>
                 <Table.HeaderCell></Table.HeaderCell>
+                <Table.HeaderCell>{count}</Table.HeaderCell>
             </Table.Row>
             );
     }
