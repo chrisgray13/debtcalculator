@@ -23,25 +23,19 @@ class DebtCalculatorApp extends Component {
         this.state = {
             debts: debts,
             enableSnowball: false,
+            extraPayment: 0.0,
             sortedColumn: undefined,
             sortDirection: 0
         };
 
         this.handleAddDebt = this.handleAddDebt.bind(this);
+        this.handleFormChange = this.handleFormChange.bind(this);
         this.handleIncludedChanged = this.handleIncludedChanged.bind(this);
         this.handleSnowballChanged = this.handleSnowballChanged.bind(this);
         this.handleSortByColumn = this.handleSortByColumn.bind(this);
     }
 
     handleAddDebt(e, debt) {
-        if (!debt.minimumPayment) {
-            debt.minimumPayment = DebtCalculator.calculateMinimumPayment(debt.balance, debt.interestRate, debt.debtLife);
-        } else if (!debt.debtLife) {
-            debt.debtLife = DebtCalculator.calculateDebtLife(debt.balance, debt.interestRate, debt.minimumPayment);
-        }
-
-        debt.amortization = DebtCalculator.buildAmortization(debt.balance, debt.interestRate, debt.minimumPayment, debt.debtLife);
-
         let debts = this.state.debts.slice();
         debts.push(debt);
         this.setState({ debts: debts });
@@ -58,6 +52,22 @@ class DebtCalculatorApp extends Component {
         let enableSnowball = this.state.enableSnowball;
 
         this.setState({ enableSnowball: !enableSnowball });
+    }
+
+    handleFormChange(e, data) {
+        let value = undefined;
+
+        if (data.type === "checkbox") {
+            value = data.checked;
+        } else if (data.type === "number") {
+            value = parseFloat(data.value);
+        } else {
+            value = data.value;
+        }
+
+        this.setState({
+            [data.name]: value
+        });
     }
 
     handleSortByColumn(e, data) {
@@ -101,9 +111,15 @@ class DebtCalculatorApp extends Component {
                     onSortByColumn={this.handleSortByColumn} onIncludedChanged={this.handleIncludedChanged} />
                 <Divider horizontal />
                 <Segment>
-                    <Checkbox name="included" toggle checked={this.state.enableSnowball} label="Enable Snowball Payments" onChange={this.handleSnowballChanged} />
+                    <Accordion panels={[ {
+                        title: 'Payoff Settings',
+                        content: {
+                            key: 'payoffSettings',
+                            content: (<DebtPayoffSettings enableSnowball={this.state.enableSnowball} onFormChange={this.handleFormChange} />)
+                        }
+                    } ]} />
                 </Segment>
-                <DebtPayoffSchedule debts={this.state.debts} enableSnowball={this.state.enableSnowball} />
+                <DebtPayoffSchedule debts={this.state.debts} enableSnowball={this.state.enableSnowball} extraPayment={this.state.extraPayment} />
             </Segment>
         );
     }
@@ -144,6 +160,14 @@ class DebtForm extends Component {
 
         debt.interestRate = debt.interestRate / 100.0;
 
+        if (!debt.minimumPayment) {
+            debt.minimumPayment = DebtCalculator.calculateMinimumPayment(debt.balance, debt.interestRate, debt.debtLife);
+        } else if (!debt.debtLife) {
+            debt.debtLife = DebtCalculator.calculateDebtLife(debt.balance, debt.interestRate, debt.minimumPayment);
+        }
+
+        debt.amortization = DebtCalculator.buildAmortization(debt.balance, debt.interestRate, debt.minimumPayment, debt.debtLife);
+
         this.props.onAddDebt(e, debt);
     }
 
@@ -167,19 +191,19 @@ class DebtForm extends Component {
         return (
             <Form>
                 <Form.Group>
-                    <Form.Input name="name" label="Name" placeholder="Name" onChange={this.handleFormChange} />
+                    <Form.Input required name="name" label="Name" placeholder="Name" width={8} onChange={this.handleFormChange} />
                 </Form.Group>
                 <Form.Group>
-                    <CurrencyFormField name="balance" label="Balance" onChange={this.handleFormChange} />
-                    <PercentageFormField name="interestRate" label="Interest Rate" onChange={this.handleFormChange} />
+                    <CurrencyFormField required name="balance" label="Balance" width={4} onChange={this.handleFormChange} />
+                    <PercentageFormField required name="interestRate" label="Interest Rate" width={4} onChange={this.handleFormChange} />
                 </Form.Group>
                 <Form.Group>
-                    <CurrencyFormField name="minimumPayment" label="Minimum Payment" onChange={this.handleFormChange} />
-                    <Form.Input name="debtLife" type="number" label="Life of Debt" placeholder="Life of debt" onChange={this.handleFormChange} />
+                    <CurrencyFormField name="minimumPayment" label="Minimum Payment" width={4} onChange={this.handleFormChange} />
+                    <Form.Input name="debtLife" type="number" label="Life of Debt" width={4} placeholder="Life of debt" onChange={this.handleFormChange} />
                 </Form.Group>
                 <Form.Group>
-                    <Form.Input name="payoffOrder" type="number" label="Payoff Order" placeholder="Payoff Order" onChange={this.handleFormChange} />
-                    <Form.Field>
+                    <Form.Input name="payoffOrder" type="number" label="Payoff Order" width={4} placeholder="Payoff Order" onChange={this.handleFormChange} />
+                    <Form.Field width={4}>
                         <label>Include</label>
                         <Checkbox name="included" toggle checked={this.state.included} onChange={this.handleFormChange} />
                     </Form.Field>
@@ -292,9 +316,23 @@ class DebtFooter extends Component {
     }
 }
 
+function DebtPayoffSettings(props) {
+    return (
+        <Form>
+            <Form.Group inline>
+                <Form.Field>
+                    <Checkbox name="enableSnowball" toggle checked={props.enableSnowball} label="Enable Snowball Payments" onChange={props.onFormChange} />
+                </Form.Field>
+                <CurrencyFormField name="extraPayment" label="Extra Payment" hideLabel onChange={props.onFormChange} />
+            </Form.Group>
+        </Form>
+    );
+}
+
 class DebtPayoffSchedule extends Component {
     render() {
-        const amortization = DebtCalculator.buildAggregateAmortization(this.props.debts, this.props.enableSnowball);
+        const amortization = DebtCalculator.buildAggregateAmortization(this.props.debts, this.props.enableSnowball, this.props.extraPayment);
+        const showExtraPayment = this.props.enableSnowball || (this.props.extraPayment > 0.0);
 
         return (
             <Table celled>
@@ -304,14 +342,14 @@ class DebtPayoffSchedule extends Component {
                         <Table.HeaderCell>Beginning Balance</Table.HeaderCell>
                         <Table.HeaderCell>Interest</Table.HeaderCell>
                         <Table.HeaderCell>Principal</Table.HeaderCell>
-                        <Table.HeaderCell>Snowball Payment</Table.HeaderCell>
+                        { showExtraPayment && <Table.HeaderCell>Extra Payment</Table.HeaderCell> }
                         <Table.HeaderCell>Ending Balance</Table.HeaderCell>
                     </Table.Row>
                 </Table.Header>
                 <Table.Body>
                     {
                         amortization.map((payment) =>
-                            <DebtPayment key={payment.paymentNumber} {...payment} />
+                            <DebtPayment key={payment.paymentNumber} showExtraPayment={showExtraPayment} {...payment} />
                         )
                     }
                 </Table.Body>
@@ -327,7 +365,7 @@ function DebtPayment(props) {
             <Table.Cell><CurrencyFormatter value={props.beginningBalance} /></Table.Cell>
             <Table.Cell><CurrencyFormatter value={props.interest} /></Table.Cell>
             <Table.Cell><CurrencyFormatter value={props.principal} /></Table.Cell>
-            <Table.Cell><CurrencyFormatter value={props.snowballPayment} /></Table.Cell>
+            { props.showExtraPayment && <Table.Cell><CurrencyFormatter value={props.extraPayment} /></Table.Cell> }
             <Table.Cell><CurrencyFormatter value={props.endingBalance} /></Table.Cell>
         </Table.Row>
     );
