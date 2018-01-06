@@ -44,7 +44,7 @@ export class DebtCalculator {
     }
 
     static buildAggregateAmortization(debts, enableSnowball, extraPayment) {
-        let totalPayment = extraPayment, maxDebtLife = 0.0;
+        let totalPayment = extraPayment ? extraPayment : 0.0, maxDebtLife = 0.0;
         let debtData = [];
 
         for (let i = 0, debtCount = debts.length; i < debtCount; i++) {
