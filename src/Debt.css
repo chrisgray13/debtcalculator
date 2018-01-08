@@ -9,3 +9,7 @@
 .debt .debtValue {
     color: #000000;
 }
+
+.debt .header .icon {
+    text-align: center;
+}

@@ -347,11 +347,13 @@ function DebtCards(props) {
                 )
             }
             <Card className="debt" raised onClick={props.onAddDebtClick}>
-                <Card.Content textAlign="center">
-                    <Card.Description>
-                        <Icon name="add circle" size="huge" />
-                        <h3>Add Debt</h3>
-                    </Card.Description>
+                <Card.Content>
+                    <Card.Header>
+                        <div>Add Debt</div>
+                        <div className="icon">
+                            <Icon name="add circle" size="huge" />
+                        </div>
+                    </Card.Header>
                 </Card.Content>
             </Card>
         </Card.Group>
