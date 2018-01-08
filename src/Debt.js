@@ -4,6 +4,12 @@ import { CurrencyFormatter, CurrencyFormField, PercentageFormatter, PercentageFo
 import { DebtCalculator } from './DebtCalculator.js';
 import './Debt.css';
 
+const SortDirection = Object.freeze({
+    none: 0,
+    ascending: 1,
+    descending: 2
+});
+
 class DebtCalculatorApp extends Component {
     constructor(props) {
         let debts = [
@@ -26,7 +32,7 @@ class DebtCalculatorApp extends Component {
             enableSnowball: false,
             extraPayment: 0.0,
             sortedColumn: undefined,
-            sortDirection: 0
+            sortDirection: SortDirection.none
         };
 
         this.handleAddDebt = this.handleAddDebt.bind(this);
@@ -92,17 +98,17 @@ class DebtCalculatorApp extends Component {
         let sortDirection = this.state.sortDirection;
 
         if (data.sortDirection) {
-            sortDirection = data.sortDirection === "ascending" ? 1 : 2;
+            sortDirection = parseInt(data.sortDirection, 10);
         } else {
-            sortDirection = (data.sortedColumn === currentSortedColumn) ? (sortDirection + 1) % 3 : 1;
+            sortDirection = (data.sortedColumn === currentSortedColumn) ? (sortDirection + 1) % 3 : SortDirection.ascending;
         }
 
         let debts = this.state.debts.slice();
 
         debts.sort((a, b) => {
-            if (sortDirection === 2) {
+            if (sortDirection === SortDirection.descending) {
                 return b[data.sortedColumn] - a[data.sortedColumn];
-            } else if (sortDirection === 1) {
+            } else if (sortDirection === SortDirection.ascending) {
                 return a[data.sortedColumn] - b[data.sortedColumn];
             } else {
                 return a["payoffOrder"] - b["payoffOrder"];
@@ -244,7 +250,7 @@ class SortableColumnHeader extends Component {
 
     render() {
         return (
-            <Table.HeaderCell sorted={((this.props.sortDirection === 0) || (this.props.sortedColumn !== this.props.name)) ? null : ((this.props.sortDirection === 1) ? "ascending" : "descending")}
+            <Table.HeaderCell sorted={((this.props.sortDirection === SortDirection.none) || (this.props.sortedColumn !== this.props.name)) ? null : ((this.props.sortDirection === SortDirection.ascending) ? "ascending" : "descending")}
                 onClick={this.handleClick}>{this.props.children}</Table.HeaderCell>
         );
     }
@@ -406,8 +412,8 @@ class DebtCard extends Component {
 
 function DebtPayoffSettings(props) {
     const payoffMethods = [
-        { text: "Quickest", value: "balance ascending" },
-        { text: "Greatest Savings", value: "interestRate descending" }
+        { text: "Quickest", value: "balance " + SortDirection.ascending.toString() },
+        { text: "Greatest Savings", value: "interestRate " + SortDirection.descending.toString() }
     ];
 
     return (
