@@ -3,7 +3,7 @@ import { Form, Input, Label } from 'semantic-ui-react';
 
 export function CurrencyFormatter(props)
 {
-    return ("$" + props.value.toFixed(2).toString());
+    return ("$" + props.value.toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,'));
 }
 
 export function CurrencyFormField(props)

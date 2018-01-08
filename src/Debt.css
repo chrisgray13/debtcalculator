@@ -1,3 +1,11 @@
 .heading {
     margin-top: 10px;
 }
+
+.card .include {
+    float: right;
+}
+
+.debt .debtValue {
+    color: #000000;
+}

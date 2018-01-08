@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
-import './Debt.css';
-import { Accordion, Button, Checkbox, Divider, Form, Header, Icon, Segment, Table } from 'semantic-ui-react';
+import { Accordion, Button, Card, Checkbox, Divider, Dropdown, Form, Grid, Header, Icon, Modal, Segment, Table } from 'semantic-ui-react';
 import { CurrencyFormatter, CurrencyFormField, PercentageFormatter, PercentageFormField } from './Formatting.js';
 import { DebtCalculator } from './DebtCalculator.js';
+import './Debt.css';
 
 class DebtCalculatorApp extends Component {
     constructor(props) {
@@ -21,6 +21,7 @@ class DebtCalculatorApp extends Component {
         }
 
         this.state = {
+            addingDebt: false,
             debts: debts,
             enableSnowball: false,
             extraPayment: 0.0,
@@ -29,6 +30,7 @@ class DebtCalculatorApp extends Component {
         };
 
         this.handleAddDebt = this.handleAddDebt.bind(this);
+        this.handleDebtFormShow = this.handleDebtFormShow.bind(this);
         this.handleFormChange = this.handleFormChange.bind(this);
         this.handleIncludedChanged = this.handleIncludedChanged.bind(this);
         this.handleSnowballChanged = this.handleSnowballChanged.bind(this);
@@ -38,7 +40,16 @@ class DebtCalculatorApp extends Component {
     handleAddDebt(e, debt) {
         let debts = this.state.debts.slice();
         debts.push(debt);
-        this.setState({ debts: debts });
+        this.setState({
+            debts: debts,
+            addingDebt: false
+        });
+    }
+
+    handleDebtFormShow(e) {
+        const addingDebt = this.state.addingDebt;
+
+        this.setState({ addingDebt: !addingDebt});
     }
 
     handleIncludedChanged(e, data) {
@@ -61,20 +72,30 @@ class DebtCalculatorApp extends Component {
             value = data.checked;
         } else if (data.type === "number") {
             value = parseFloat(data.value);
+        } else if ((data.type === undefined) && data.options) {
+            const sortData = data.value.split(" ");
+
+            this.handleSortByColumn(e, { sortedColumn: sortData[0], sortDirection: sortData[1] })
         } else {
             value = data.value;
         }
 
-        this.setState({
-            [data.name]: value
-        });
+        if (value !== undefined) {
+            this.setState({
+                [data.name]: value
+            });
+        }
     }
 
     handleSortByColumn(e, data) {
         let currentSortedColumn = this.state.sortedColumn;
         let sortDirection = this.state.sortDirection;
 
-        sortDirection = (data.sortedColumn === currentSortedColumn) ? (sortDirection + 1) % 3 : 1;
+        if (data.sortDirection) {
+            sortDirection = data.sortDirection === "ascending" ? 1 : 2;
+        } else {
+            sortDirection = (data.sortedColumn === currentSortedColumn) ? (sortDirection + 1) % 3 : 1;
+        }
 
         let debts = this.state.debts.slice();
 
@@ -98,28 +119,30 @@ class DebtCalculatorApp extends Component {
     render() {
         return (
             <Segment>
-                <Segment>
-                    <DebtHeading title="Debt Calculator" subHeading="Calculate how long until you are DEBT FREE!" iconName="calculator" />
-                </Segment>
-                <Segment>
-                    <Accordion panels={[
-                        { title: 'Add Debt', content: { key: 'addDebt', content: (<DebtForm onAddDebt={this.handleAddDebt} />) } }
-                    ] } />
-                </Segment>
+                <DebtHeading title="Debt Calculator" subHeading="Calculate how long until you are DEBT FREE!" iconName="calculator" />
+                <Divider />
+                <DebtCards debts={this.state.debts} sortedColumn={this.state.sortedColumn} sortDirection={this.state.sortDirection}
+                    onAddDebtClick={this.handleDebtFormShow} onSortByColumn={this.handleSortByColumn} onIncludedChanged={this.handleIncludedChanged} /> 
+                <Modal open={this.state.addingDebt} onClose={this.handleDebtFormShow}>
+                    <Modal.Header>Add a Debt</Modal.Header>
+                    <Modal.Content>
+                        <DebtForm onAddDebt={this.handleAddDebt} />
+                    </Modal.Content>
+                </Modal>
                 <Divider horizontal />
-                <DebtList debts={this.state.debts} sortedColumn={this.state.sortedColumn} sortDirection={this.state.sortDirection}
-                    onSortByColumn={this.handleSortByColumn} onIncludedChanged={this.handleIncludedChanged} />
-                <Divider horizontal />
-                <Segment>
-                    <Accordion panels={[ {
-                        title: 'Payoff Settings',
-                        content: {
-                            key: 'payoffSettings',
-                            content: (<DebtPayoffSettings enableSnowball={this.state.enableSnowball} onFormChange={this.handleFormChange} />)
-                        }
-                    } ]} />
+                <Header as="h2" attached="top" inverted content="Details" />
+                <Segment attached>
+                    <Segment>
+                        <Accordion panels={[ {
+                            title: "Payoff Settings",
+                            content: {
+                                key: 'payoffSettings',
+                                content: (<DebtPayoffSettings enableSnowball={this.state.enableSnowball} onFormChange={this.handleFormChange} />)
+                            }
+                        } ]} />
+                    </Segment>
+                    <DebtPayoffSchedule debts={this.state.debts} enableSnowball={this.state.enableSnowball} extraPayment={this.state.extraPayment} />
                 </Segment>
-                <DebtPayoffSchedule debts={this.state.debts} enableSnowball={this.state.enableSnowball} extraPayment={this.state.extraPayment} />
             </Segment>
         );
     }
@@ -200,13 +223,6 @@ class DebtForm extends Component {
                 <Form.Group>
                     <CurrencyFormField name="minimumPayment" label="Minimum Payment" width={4} onChange={this.handleFormChange} />
                     <Form.Input name="debtLife" type="number" label="Life of Debt" width={4} placeholder="Life of debt" onChange={this.handleFormChange} />
-                </Form.Group>
-                <Form.Group>
-                    <Form.Input name="payoffOrder" type="number" label="Payoff Order" width={4} placeholder="Payoff Order" onChange={this.handleFormChange} />
-                    <Form.Field width={4}>
-                        <label>Include</label>
-                        <Checkbox name="included" toggle checked={this.state.included} onChange={this.handleFormChange} />
-                    </Form.Field>
                 </Form.Group>
                 <Button type='submit' onClick={this.addDebt}>Add</Button>
             </Form>
@@ -316,14 +332,96 @@ class DebtFooter extends Component {
     }
 }
 
+function DebtCards(props) {
+    return (
+        <Card.Group>
+            {
+                props.debts.map((debt) =>
+                    <DebtCard key={debt.name} {...debt} onIncludedChanged={props.onIncludedChanged} />
+                )
+            }
+            <Card className="debt" raised onClick={props.onAddDebtClick}>
+                <Card.Content textAlign="center">
+                    <Card.Description>
+                        <Icon name="add circle" size="huge" />
+                        <h3>Add Debt</h3>
+                    </Card.Description>
+                </Card.Content>
+            </Card>
+        </Card.Group>
+    );
+}
+
+class DebtCard extends Component {
+    constructor(props) {
+        super(props);
+
+        this.handleIncludedChanged = this.handleIncludedChanged.bind(this);
+    }
+
+    handleIncludedChanged(e) {
+        this.props.onIncludedChanged(e, { debtName: this.props.name });
+    }
+
+    render() {
+        return (
+            <Card className="debt" raised>
+                <Card.Content>
+                    <Checkbox className="include" toggle checked={this.props.included} onChange={this.handleIncludedChanged} />
+                    <Card.Header>
+                        {this.props.name}
+                    </Card.Header>
+                    <Card.Meta>
+                        Interest Rate <PercentageFormatter value={this.props.interestRate} />
+                    </Card.Meta>
+                </Card.Content>
+                <Card.Content extra textAlign="center">
+                    <Grid columns="three" divided>
+                        <Grid.Row>
+                            <Grid.Column>
+                                <div className="debtValue">
+                                    <div className="value"><CurrencyFormatter value={this.props.balance} /></div>
+                                    <div className="label">Balance</div>
+                                </div>
+                            </Grid.Column>
+                            <Grid.Column>
+                                <div className="debtValue">
+                                    <div className="value"><CurrencyFormatter value={this.props.minimumPayment} /></div>
+                                    <div className="label">Payment</div>
+                                </div>
+                            </Grid.Column>
+                            <Grid.Column>
+                                <div className="debtValue">
+                                    <div className="value">{Math.ceil(this.props.debtLife)}</div>
+                                    <div className="label">{Math.ceil(this.props.debtLife) === 1 ? "Month" : "Months"}</div>
+                                </div>
+                            </Grid.Column>
+                        </Grid.Row>
+                    </Grid>
+                </Card.Content>
+            </Card>
+        );
+    }
+}
+
 function DebtPayoffSettings(props) {
+    const payoffMethods = [
+        { text: "Quickest", value: "balance ascending" },
+        { text: "Greatest Savings", value: "interestRate descending" }
+    ];
+
     return (
         <Form>
-            <Form.Group inline>
-                <Form.Field>
-                    <Checkbox name="enableSnowball" toggle checked={props.enableSnowball} label="Enable Snowball Payments" onChange={props.onFormChange} />
+            <Form.Group>
+                <Form.Field width="3">
+                    <label>Payoff Method</label>
+                    <Dropdown placeholder='Select Payoff Method' fluid selection options={payoffMethods} onChange={props.onFormChange} />
                 </Form.Field>
-                <CurrencyFormField name="extraPayment" label="Extra Payment" hideLabel onChange={props.onFormChange} />
+                <Form.Field width="3">
+                    <label>Enable Snowball Payments</label>
+                    <Checkbox name="enableSnowball" toggle checked={props.enableSnowball} onChange={props.onFormChange} />
+                </Form.Field>
+                <CurrencyFormField name="extraPayment" label="Extra Payment" width="3" onChange={props.onFormChange} />
             </Form.Group>
         </Form>
     );
