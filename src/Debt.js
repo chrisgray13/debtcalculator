@@ -1,41 +1,43 @@
 import React, { Component } from 'react';
 import { Accordion, Button, Card, Checkbox, Divider, Dropdown, Form, Grid, Header, Icon, Modal, Segment, Table } from 'semantic-ui-react';
 import { CurrencyFormatter, CurrencyFormField, PercentageFormatter, PercentageFormField } from './Formatting.js';
+import { DebtList } from './DebtList.js';
 import { DebtCalculator } from './DebtCalculator.js';
+import { SortDirection } from './SortDirection.js';
 import './Debt.css';
-
-const SortDirection = Object.freeze({
-    none: 0,
-    ascending: 1,
-    descending: 2
-});
+import Transition from 'semantic-ui-react/dist/commonjs/modules/Transition/Transition';
 
 class DebtCalculatorApp extends Component {
     constructor(props) {
-        let debts = [
-            { name: "Home Depot", balance: 1200.00, interestRate: .085, minimumPayment: 54.00, debtLife: 24.265, included: true, payoffOrder: "1", amortization: [] },
-            { name: "Medical Bill", balance: 3000.00, interestRate: 0.0, minimumPayment: 250.00, debtLife: 12, included: true, payoffOrder: "2", amortization: [] },
-            { name: "American Express", balance: 5700.00, interestRate: .12, minimumPayment: 102.00, debtLife: 82.239, included: true, payoffOrder: "3", amortization: [] },
-            { name: "Student Loan", balance: 12500.00, interestRate: 0.08, minimumPayment: 151.66, debtLife: 120, included: true, payoffOrder: "4", amortization: [] },
-            { name: "Toyota", balance: 17800.00, interestRate: 0.15, minimumPayment:  617.05, debtLife: 36, included: true, payoffOrder: "5", amortization: [] }
-        ];
-
         super(props);
 
-        for (let i = 0, length = debts.length; i < length; i++) {
-            debts[i].amortization = DebtCalculator.buildAmortization(debts[i].balance, debts[i].interestRate, debts[i].minimumPayment, debts[i].debtLife);
-        }
+        let debtList = new DebtList([
+            { name: "Home Depot", balance: 1200.00, interestRate: .085, minimumPayment: 54.00, debtLife: 24.265, interest: 110.38, included: true, payoffOrder: "1", amortization: [] },
+            { name: "Medical Bill", balance: 3000.00, interestRate: 0.0, minimumPayment: 250.00, debtLife: 12, interest: 0.0, included: true, payoffOrder: "2", amortization: [] },
+            { name: "American Express", balance: 5700.00, interestRate: .12, minimumPayment: 102.00, debtLife: 82.239, interest: 2688.46, included: true, payoffOrder: "3", amortization: [] },
+            { name: "Student Loan", balance: 12500.00, interestRate: 0.08, minimumPayment: 151.66, debtLife: 120, interest: 5699.03, included: true, payoffOrder: "4", amortization: [] },
+            { name: "Toyota", balance: 17800.00, interestRate: 0.15, minimumPayment: 617.05, debtLife: 36, interest: 4413.5, included: true, payoffOrder: "5", amortization: [] }
+        ]);
+
+        const enableSnowball = false;
+        const extraPayment = 0.0;
+
+        debtList.buildAmortizations(enableSnowball, extraPayment);
+        const amortization = debtList.aggregateAmortization;
 
         this.state = {
             addingDebt: false,
-            debts: debts,
+            debtList: debtList,
+            debtFilter: undefined,
             enableSnowball: false,
             extraPayment: 0.0,
             sortedColumn: undefined,
-            sortDirection: SortDirection.none
+            sortDirection: SortDirection.none,
+            amortization: amortization
         };
 
         this.handleAddDebt = this.handleAddDebt.bind(this);
+        this.handleCardClick = this.handleCardClick.bind(this);
         this.handleDebtFormShow = this.handleDebtFormShow.bind(this);
         this.handleFormChange = this.handleFormChange.bind(this);
         this.handleIncludedChanged = this.handleIncludedChanged.bind(this);
@@ -43,11 +45,35 @@ class DebtCalculatorApp extends Component {
         this.handleSortByColumn = this.handleSortByColumn.bind(this);
     }
 
+    setState(newState) {
+        let debtList = undefined;
+
+        if (newState.debtList || newState.extraPayment || (newState.enableSnowball !== undefined)) {
+            const debtFilter = newState.hasOwnProperty("debtFilter") ? newState.debtFilter : this.state.debtFilter;
+            const enableSnowball = (newState.enableSnowball === undefined) ? this.state.enableSnowball : newState.enableSnowball;
+            const extraPayment = (newState.extraPayment) ? newState.extraPayment : this.state.extraPayment;
+            debtList = (newState.debtList) ? newState.debtList : new DebtList(JSON.parse(JSON.stringify(this.state.debtList.debts)));
+
+            debtList.buildAmortizations(enableSnowball, extraPayment);
+            newState.debtList = debtList;
+            newState.amortization =
+                debtFilter ? debtList.debts.find((debt) => { return debt.name === debtFilter; }).newAmortization :
+                    debtList.aggregateAmortization;
+        } else if (newState.hasOwnProperty("debtFilter")) {
+            debtList = JSON.parse(JSON.stringify(this.state.debtList));
+            newState.amortization =
+                newState.debtFilter ? debtList.debts.find((debt) => { return debt.name === newState.debtFilter; }).newAmortization :
+                    debtList.aggregateAmortization;
+        }
+
+        super.setState(newState);
+    }
+
     handleAddDebt(e, debt) {
-        let debts = this.state.debts.slice();
-        debts.push(debt);
+        let debtList = JSON.parse(JSON.stringify(this.state.debtList));
+        debtList.add(debt);
         this.setState({
-            debts: debts,
+            debtList: debtList,
             addingDebt: false
         });
     }
@@ -58,11 +84,16 @@ class DebtCalculatorApp extends Component {
         this.setState({ addingDebt: !addingDebt});
     }
 
+    handleCardClick(e, data) {
+        let debtFilter = this.state.debtFilter;
+        debtFilter = (debtFilter === data.debtName) ? undefined : data.debtName;
+        this.setState({ debtFilter });
+    }
+
     handleIncludedChanged(e, data) {
-        let debts = this.state.debts.slice();
-        let debt = debts.find((debt) => { return debt.name === data.debtName; })
-        debt.included = !debt.included;
-        this.setState({ debts: debts });
+        let debtList = JSON.parse(JSON.stringify(this.state.debtList));
+        debtList.toggleIncludeFlag(data.debtName);
+        this.setState({ debtList: debtList });
     }
 
     handleSnowballChanged(e, data) {
@@ -103,22 +134,13 @@ class DebtCalculatorApp extends Component {
             sortDirection = (data.sortedColumn === currentSortedColumn) ? (sortDirection + 1) % 3 : SortDirection.ascending;
         }
 
-        let debts = this.state.debts.slice();
-
-        debts.sort((a, b) => {
-            if (sortDirection === SortDirection.descending) {
-                return b[data.sortedColumn] - a[data.sortedColumn];
-            } else if (sortDirection === SortDirection.ascending) {
-                return a[data.sortedColumn] - b[data.sortedColumn];
-            } else {
-                return a["payoffOrder"] - b["payoffOrder"];
-            }
-        });
+        let debtList = JSON.parse(JSON.stringify(this.state.debtList));
+        debtList.sort(data.sortedColumn, sortDirection);
 
         this.setState({
             sortedColumn: data.sortedColumn,
             sortDirection: sortDirection,
-            debts: debts
+            debtList: debtList
         });
     }
 
@@ -127,14 +149,19 @@ class DebtCalculatorApp extends Component {
             <Segment>
                 <DebtHeading title="Debt Calculator" subHeading="Calculate how long until you are DEBT FREE!" iconName="calculator" />
                 <Divider />
-                <DebtCards debts={this.state.debts} sortedColumn={this.state.sortedColumn} sortDirection={this.state.sortDirection}
-                    onAddDebtClick={this.handleDebtFormShow} onSortByColumn={this.handleSortByColumn} onIncludedChanged={this.handleIncludedChanged} /> 
-                <Modal open={this.state.addingDebt} onClose={this.handleDebtFormShow}>
-                    <Modal.Header>Add a Debt</Modal.Header>
-                    <Modal.Content>
-                        <DebtForm onAddDebt={this.handleAddDebt} />
-                    </Modal.Content>
-                </Modal>
+                <DebtCards debts={this.state.debtList.debts} debtFilter={this.state.debtFilter} sortedColumn={this.state.sortedColumn} sortDirection={this.state.sortDirection}
+                    onAddDebtClick={this.handleDebtFormShow} onCardClick={this.handleCardClick} onSortByColumn={this.handleSortByColumn} onIncludedChanged={this.handleIncludedChanged} /> 
+                <Transition animation="swing up" duration={800} visible={this.state.addingDebt}>
+                    <Modal open={this.state.addingDebt} onClose={this.handleDebtFormShow}>
+                        <Modal.Header>
+                            Add a debt
+                            <h4>Please fill out the form to include a debt in your debt-free plan!</h4>
+                        </Modal.Header>
+                        <Modal.Content>
+                            <DebtForm onAddDebt={this.handleAddDebt} />
+                        </Modal.Content>
+                    </Modal>
+                </Transition>
                 <Divider horizontal />
                 <Header as="h2" attached="top" inverted content="Details" />
                 <Segment attached>
@@ -147,7 +174,7 @@ class DebtCalculatorApp extends Component {
                             }
                         } ]} />
                     </Segment>
-                    <DebtPayoffSchedule debts={this.state.debts} enableSnowball={this.state.enableSnowball} extraPayment={this.state.extraPayment} />
+                    <DebtPayoffSchedule amortization={this.state.amortization} enableSnowball={this.state.enableSnowball} extraPayment={this.state.extraPayment} />
                 </Segment>
             </Segment>
         );
@@ -172,10 +199,12 @@ class DebtForm extends Component {
 
         this.state = {
             name: undefined,
+            debtDate: new Date(),
             balance: undefined,
             minimumPayment: undefined,
             interestRate: undefined,
             debtLife: undefined,
+            interest: undefined,
             included: true,
             payoffOrder: undefined
         };
@@ -187,6 +216,7 @@ class DebtForm extends Component {
     addDebt(e) {
         let debt = Object.assign({}, this.state);
 
+        debt.debtDate = (debt.debtDate) ? debt.debtDate : new Date();
         debt.interestRate = debt.interestRate / 100.0;
 
         if (!debt.minimumPayment) {
@@ -195,7 +225,9 @@ class DebtForm extends Component {
             debt.debtLife = DebtCalculator.calculateDebtLife(debt.balance, debt.interestRate, debt.minimumPayment);
         }
 
-        debt.amortization = DebtCalculator.buildAmortization(debt.balance, debt.interestRate, debt.minimumPayment, debt.debtLife);
+        const amortizationResults = DebtCalculator.buildAmortizationWithTotals(debt.balance, debt.interestRate, debt.minimumPayment, debt.debtLife);
+        debt.amortization = amortizationResults.amortization;
+        debt.interest = amortizationResults.interest;
 
         this.props.onAddDebt(e, debt);
     }
@@ -228,6 +260,7 @@ class DebtForm extends Component {
                 </Form.Group>
                 <Form.Group>
                     <CurrencyFormField name="minimumPayment" label="Minimum Payment" width={4} onChange={this.handleFormChange} />
+                    {/* <Label circular color="blue">Or</Label> */}
                     <Form.Input name="debtLife" type="number" label="Life of Debt" width={4} placeholder="Life of debt" onChange={this.handleFormChange} />
                 </Form.Group>
                 <Button type='submit' onClick={this.addDebt}>Add</Button>
@@ -235,7 +268,7 @@ class DebtForm extends Component {
         );
     }
 }
-
+/*
 class SortableColumnHeader extends Component {
 
     constructor(props) {
@@ -337,13 +370,13 @@ class DebtFooter extends Component {
             );
     }
 }
-
+*/
 function DebtCards(props) {
     return (
         <Card.Group>
             {
                 props.debts.map((debt) =>
-                    <DebtCard key={debt.name} {...debt} onIncludedChanged={props.onIncludedChanged} />
+                    <DebtCard key={debt.name} {...debt} debtFilter={props.debtFilter} onCardClick={props.onCardClick} onIncludedChanged={props.onIncludedChanged} />
                 )
             }
             <Card className="debt" raised onClick={props.onAddDebtClick}>
@@ -364,6 +397,7 @@ class DebtCard extends Component {
     constructor(props) {
         super(props);
 
+        this.handleCardClicked = this.handleCardClicked.bind(this);
         this.handleIncludedChanged = this.handleIncludedChanged.bind(this);
     }
 
@@ -371,9 +405,13 @@ class DebtCard extends Component {
         this.props.onIncludedChanged(e, { debtName: this.props.name });
     }
 
+    handleCardClicked(e, data) {
+        this.props.onCardClick(e, { debtName: this.props.name });
+    }
+
     render() {
         return (
-            <Card className="debt" raised>
+            <Card className="debt" raised color={this.props.name === this.props.debtFilter ? "blue" : undefined} onClick={this.handleCardClicked}>
                 <Card.Content>
                     <Checkbox className="include" toggle checked={this.props.included} onChange={this.handleIncludedChanged} />
                     <Card.Header>
@@ -382,6 +420,38 @@ class DebtCard extends Component {
                     <Card.Meta>
                         Interest Rate <PercentageFormatter value={this.props.interestRate} />
                     </Card.Meta>
+                </Card.Content>
+                <Card.Content>
+                    <Card.Description>
+                        <Grid columns="four">
+                            <Grid.Row>
+                                <Grid.Column>
+                                    <div className="debtValue">
+                                        <div className="value"><CurrencyFormatter value={this.props.interest} /></div>
+                                        <div className="label">Interest</div>
+                                    </div>
+                                </Grid.Column>
+                                <Grid.Column>
+                                    <div className="debtValue">
+                                        <div className="value"><CurrencyFormatter value={this.props.actualInterest} /></div>
+                                        <div className="label">Interest</div>
+                                    </div>
+                                </Grid.Column>
+                                <Grid.Column>
+                                    <div className="debtValue">
+                                        <div className="value"><CurrencyFormatter value={this.props.interest - this.props.actualInterest} /></div>
+                                        <div className="label">Savings</div>
+                                    </div>
+                                </Grid.Column>
+                                <Grid.Column>
+                                    <div className="debtValue">
+                                        <div className="value">{Math.ceil(this.props.actualDebtLife)}</div>
+                                        <div className="label">{Math.ceil(this.props.debtLife) === 1 ? "Month" : "Months"}</div>
+                                    </div>
+                                </Grid.Column>
+                            </Grid.Row>
+                        </Grid>
+                    </Card.Description>
                 </Card.Content>
                 <Card.Content extra textAlign="center">
                     <Grid columns="three" divided>
@@ -437,7 +507,6 @@ function DebtPayoffSettings(props) {
 
 class DebtPayoffSchedule extends Component {
     render() {
-        const amortization = DebtCalculator.buildAggregateAmortization(this.props.debts, this.props.enableSnowball, this.props.extraPayment);
         const showExtraPayment = this.props.enableSnowball || (this.props.extraPayment > 0.0);
 
         return (
@@ -454,7 +523,7 @@ class DebtPayoffSchedule extends Component {
                 </Table.Header>
                 <Table.Body>
                     {
-                        amortization.map((payment) =>
+                        this.props.amortization.map((payment) =>
                             <DebtPayment key={payment.paymentNumber} showExtraPayment={showExtraPayment} {...payment} />
                         )
                     }

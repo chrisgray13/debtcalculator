@@ -13,3 +13,12 @@
 .debt .header .icon {
     text-align: center;
 }
+
+.modal .header {
+    background: #e0e1e2 !important;
+}
+
+.modal .header h4 {
+    padding-top: .5rem;
+    opacity: .85;
+}

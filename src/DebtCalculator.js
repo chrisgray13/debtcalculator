@@ -1,4 +1,10 @@
 export class DebtCalculator {
+    /*
+    - Build Amortization for single debt
+    - Build Amortization for many debts
+    - Add totals
+    - Aggregate Amortizations
+    */
     static calculateMinimumPayment(balance, interestRate, debtLife) {
         let periodicInterest = interestRate / 12.0;
 
@@ -12,18 +18,26 @@ export class DebtCalculator {
     }
 
     static buildAmortization(balance, interestRate, minimumPayment, debtLife) {
+        return DebtCalculator.buildAmortizationWithTotals(balance, interestRate, minimumPayment, debtLife).amortization;
+    }
+
+    static buildAmortizationWithTotals(balance, interestRate, minimumPayment, debtLife) {
         let i = 0, paymentNumber = 1;
         let periodicInterest = interestRate / 12.0;
         let remainingBalance = balance;
         let beginningBalance = 0.0, interest = 0.0, principal = 0.0;
         let amortization = new Array(Math.ceil(debtLife));
+        let totals = { principal: 0.0, interest: 0.0, debtLife: 0 };
         let payment = {};
 
-        for (; remainingBalance > 0; i++, paymentNumber++) {
+        for (; remainingBalance > 0; i++ , paymentNumber++) {
             beginningBalance = remainingBalance;
             interest = Math.round((remainingBalance * periodicInterest) * 100.0) / 100.0;
             principal = Math.min(minimumPayment - interest, remainingBalance);
             remainingBalance -= principal;
+
+            totals.principal += principal;
+            totals.interest += interest;
 
             payment = {
                 paymentNumber: paymentNumber,
@@ -36,26 +50,39 @@ export class DebtCalculator {
             amortization[i] = payment;
         }
 
+        totals.debtLife = payment.paymentNumber;
+
         if (paymentNumber < debtLife) {
             amortization = amortization.slice(0, paymentNumber - 1);
         }
 
-        return amortization;
+        return { amortization, totals };
     }
 
     static buildAggregateAmortization(debts, enableSnowball, extraPayment) {
+        let locDebts = JSON.parse(JSON.stringify(debts));
+
+        return DebtCalculator.buildAggregateAmortizationAndUpdateDebts(locDebts, enableSnowball, extraPayment);
+    }
+
+    static addAmortizationToDebts(debts, enableSnowball, extraPayment) {
         let totalPayment = extraPayment ? extraPayment : 0.0, maxDebtLife = 0.0;
         let debtData = [];
 
         for (let i = 0, debtCount = debts.length; i < debtCount; i++) {
             if (debts[i].included) {
+                debts[i].actualInterest = 0.0;
+                debts[i].actualDebtLife = Math.ceil(debts[i].debtLife);
+                debts[i].newAmortization = new Array(debts[i].actualDebtLife);
+
                 totalPayment += debts[i].minimumPayment;
                 maxDebtLife = Math.max(debts[i].debtLife, maxDebtLife);
 
                 debtData.push({
                     periodicInterest: debts[i].interestRate / 12.0,
                     remainingBalance: debts[i].balance,
-                    minimumPayment: debts[i].minimumPayment
+                    minimumPayment: debts[i].minimumPayment,
+                    debtIndex: i
                 });
             }
         }
@@ -77,6 +104,16 @@ export class DebtCalculator {
                 const interest = Math.round((debtData[i].remainingBalance * debtData[i].periodicInterest) * 100.0) / 100.0;
                 const principal = Math.min(debtData[i].minimumPayment - interest, debtData[i].remainingBalance);
 
+                const debt = debts[debtData[i].debtIndex];
+                debt.actualInterest += interest;
+
+                debt.newAmortization[payment.paymentNumber - 1] = {
+                    beginningBalance: debtData[i].remainingBalance,
+                    interest: interest,
+                    principal: principal,
+                    endingBalance: debtData[i].remainingBalance - principal
+                };
+
                 payment.beginningBalance += debtData[i].remainingBalance;
                 payment.interest += interest;
                 payment.principal += principal;
@@ -86,6 +123,11 @@ export class DebtCalculator {
                     if (!enableSnowball) {
                         totalPayment -= debtData[i].minimumPayment;
                         partialPayment += (interest + principal);
+                    }
+
+                    if (payment.paymentNumber < debt.debtLife) {
+                        debt.newAmortization = debt.newAmortization.slice(0, payment.paymentNumber);
+                        debt.actualDebtLife = payment.paymentNumber;
                     }
 
                     debtData.splice(i, 1);
@@ -104,9 +146,133 @@ export class DebtCalculator {
                 debtData[i].remainingBalance -= locExtraPayment;
                 partialPayment -= locExtraPayment;
 
+                const debt = debts[debtData[i].debtIndex];
+                const debtPayment = debt.newAmortization[payment.paymentNumber - 1];
+                debtPayment.extraPayment = locExtraPayment;
+                debtPayment.endingBalance -= locExtraPayment;
+
                 if (debtData[i].remainingBalance <= 0.0) {
                     if (!enableSnowball) {
                         totalPayment -= debtData[i].minimumPayment;
+                    }
+
+                    if (payment.paymentNumber < debt.debtLife) {
+                        debt.newAmortization = debt.newAmortization.slice(0, payment.paymentNumber);
+                        debt.actualDebtLife = payment.paymentNumber;
+                    }
+
+                    debtData.splice(i, 1);
+                    i--;  // Increasing to be able to access the same debt again
+                    debtDataLength--;
+                }
+            }
+
+            payment.endingBalance = payment.beginningBalance - (payment.principal + payment.extraPayment);
+
+            amortization[payment.paymentNumber - 1] = Object.assign({}, payment);
+        }
+
+        if (payment.paymentNumber < maxDebtLife) {
+            amortization = amortization.slice(0, payment.paymentNumber);
+        }
+
+        return amortization;
+    }
+
+    static buildAggregateAmortizationAndUpdateDebts(debts, enableSnowball, extraPayment) {
+        let totalPayment = extraPayment ? extraPayment : 0.0, maxDebtLife = 0.0;
+        let debtData = [];
+
+        for (let i = 0, debtCount = debts.length; i < debtCount; i++) {
+            if (debts[i].included) {
+                debts[i].actualInterest = 0.0;
+                debts[i].actualDebtLife = Math.ceil(debts[i].debtLife);
+                debts[i].newAmortization = new Array(debts[i].actualDebtLife);
+
+                totalPayment += debts[i].minimumPayment;
+                maxDebtLife = Math.max(debts[i].debtLife, maxDebtLife);
+
+                debtData.push({
+                    periodicInterest: debts[i].interestRate / 12.0,
+                    remainingBalance: debts[i].balance,
+                    minimumPayment: debts[i].minimumPayment,
+                    debtIndex: i
+                });
+            }
+        }
+
+        let amortization = new Array(Math.ceil(maxDebtLife));
+        let payment = { paymentNumber: 0 };
+
+        for (let debtDataLength = debtData.length; debtDataLength > 0;) {
+            let partialPayment = 0.0;
+
+            payment.paymentNumber++;
+            payment.beginningBalance = 0.0;
+            payment.interest = 0.0;
+            payment.principal = 0.0;
+            payment.extraPayment = 0.0;
+
+            // Handling the initial payment without considering snowballs or extra payment(s)
+            for (let i = 0; i < debtDataLength; i++) {
+                const interest = Math.round((debtData[i].remainingBalance * debtData[i].periodicInterest) * 100.0) / 100.0;
+                const principal = Math.min(debtData[i].minimumPayment - interest, debtData[i].remainingBalance);
+
+                const debt = debts[debtData[i].debtIndex];
+                debt.actualInterest += interest;
+
+                debt.newAmortization[payment.paymentNumber - 1] = {
+                    beginningBalance: debtData[i].remainingBalance,
+                    interest: interest,
+                    principal: principal,
+                    endingBalance: debtData[i].remainingBalance - principal
+                };
+
+                payment.beginningBalance += debtData[i].remainingBalance;
+                payment.interest += interest;
+                payment.principal += principal;
+                debtData[i].remainingBalance -= principal;
+
+                if (debtData[i].remainingBalance <= 0.0) {
+                    if (!enableSnowball) {
+                        totalPayment -= debtData[i].minimumPayment;
+                        partialPayment += (interest + principal);
+                    }
+
+                    if (payment.paymentNumber < debt.debtLife) {
+                        debt.newAmortization = debt.newAmortization.slice(0, payment.paymentNumber);
+                        debt.actualDebtLife = payment.paymentNumber;
+                    }
+
+                    debtData.splice(i, 1);
+                    i--;  // Increasing to be able to access the same debt again
+                    debtDataLength--;
+                }
+            }
+
+            payment.regularPayment = payment.interest + payment.principal;
+
+            // Looping back through to add any snowball or extra payment(s)
+            partialPayment = totalPayment - (payment.regularPayment - partialPayment);
+            for (let i = 0; i < debtDataLength && (partialPayment > 0); i++) {
+                const locExtraPayment = Math.min(debtData[i].remainingBalance, partialPayment);
+                payment.extraPayment += locExtraPayment;
+                debtData[i].remainingBalance -= locExtraPayment;
+                partialPayment -= locExtraPayment;
+
+                const debt = debts[debtData[i].debtIndex];
+                const debtPayment = debt.newAmortization[payment.paymentNumber - 1];
+                debtPayment.extraPayment = locExtraPayment;
+                debtPayment.endingBalance -= locExtraPayment;
+
+                if (debtData[i].remainingBalance <= 0.0) {
+                    if (!enableSnowball) {
+                        totalPayment -= debtData[i].minimumPayment;
+                    }
+
+                    if (payment.paymentNumber < debt.debtLife) {
+                        debt.newAmortization = debt.newAmortization.slice(0, payment.paymentNumber);
+                        debt.actualDebtLife = payment.paymentNumber;
                     }
 
                     debtData.splice(i, 1);
