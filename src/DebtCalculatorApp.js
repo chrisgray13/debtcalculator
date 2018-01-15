@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { Accordion, Button, Card, Checkbox, Divider, Dropdown, Form, Grid, Header, Icon, Modal, Segment, Statistic, Table } from 'semantic-ui-react';
 import { CurrencyFormatter, CurrencyFormField, PercentageFormatter, PercentageFormField } from './Formatting.js';
+import { Debt } from './Debt.js';
 import { DebtList } from './DebtList.js';
 import { DebtCalculator } from './DebtCalculator.js';
 import { SortDirection } from './SortDirection.js';
@@ -12,11 +13,11 @@ class DebtCalculatorApp extends Component {
         super(props);
 
         let debtList = new DebtList([
-            { name: "Home Depot", balance: 1200.00, interestRate: .085, minimumPayment: 54.00, debtLife: 24.265, interest: 110.38, included: true, payoffOrder: "1", amortization: [] },
-            { name: "Medical Bill", balance: 3000.00, interestRate: 0.0, minimumPayment: 250.00, debtLife: 12, interest: 0.0, included: true, payoffOrder: "2", amortization: [] },
-            { name: "American Express", balance: 5700.00, interestRate: .12, minimumPayment: 102.00, debtLife: 82.239, interest: 2688.46, included: true, payoffOrder: "3", amortization: [] },
-            { name: "Student Loan", balance: 12500.00, interestRate: 0.08, minimumPayment: 151.66, debtLife: 120, interest: 5699.03, included: true, payoffOrder: "4", amortization: [] },
-            { name: "Toyota", balance: 17800.00, interestRate: 0.15, minimumPayment: 617.05, debtLife: 36, interest: 4413.5, included: true, payoffOrder: "5", amortization: [] }
+            { name: "Home Depot", balance: 1200.00, interestRate: .085, minimumPayment: 54.00, debtLife: 24.265, interest: 110.38, included: true, payoffOrder: 1, amortization: [] },
+            { name: "Medical Bill", balance: 3000.00, interestRate: 0.0, minimumPayment: 250.00, debtLife: 12, interest: 0.0, included: true, payoffOrder: 2, amortization: [] },
+            { name: "American Express", balance: 5700.00, interestRate: .12, minimumPayment: 102.00, debtLife: 82.239, interest: 2688.46, included: true, payoffOrder: 3, amortization: [] },
+            { name: "Student Loan", balance: 12500.00, interestRate: 0.08, minimumPayment: 151.66, debtLife: 120, interest: 5699.03, included: true, payoffOrder: 4, amortization: [] },
+            { name: "Toyota", balance: 17800.00, interestRate: 0.15, minimumPayment: 617.05, debtLife: 36, interest: 4413.5, included: true, payoffOrder: 5, amortization: [] }
         ]);
 
         const enableSnowball = false;
@@ -159,7 +160,7 @@ class DebtCalculatorApp extends Component {
                             <h4>Please fill out the form to include a debt in your debt-free plan!</h4>
                         </Modal.Header>
                         <Modal.Content>
-                            <DebtForm onAddDebt={this.handleAddDebt} />
+                            <DebtForm key={this.state.debtList.debts.length + 1} onAddDebt={this.handleAddDebt} />
                         </Modal.Content>
                     </Modal>
                 </Transition>
@@ -249,15 +250,7 @@ class DebtForm extends Component {
         super(props);
 
         this.state = {
-            name: undefined,
-            debtDate: new Date(),
-            balance: undefined,
-            minimumPayment: undefined,
-            interestRate: undefined,
-            debtLife: undefined,
-            interest: undefined,
-            included: true,
-            payoffOrder: undefined
+            debt: new Debt()
         };
 
         this.addDebt = this.addDebt.bind(this);
@@ -265,8 +258,9 @@ class DebtForm extends Component {
     }
 
     addDebt(e) {
-        let debt = Object.assign({}, this.state);
+        let debt = Object.assign({}, this.state.debt);
 
+        debt.payoffOrder = this.props.key;
         debt.debtDate = (debt.debtDate) ? debt.debtDate : new Date();
         debt.interestRate = debt.interestRate / 100.0;
 
@@ -284,18 +278,18 @@ class DebtForm extends Component {
     }
 
     handleFormChange(e, data) {
-        let value = undefined;
+        let debt = Object.assign({}, this.state.debt);
 
         if (data.type === "checkbox") {
-            value = data.checked;
+            debt[data.name] = data.checked;
         } else if (data.type === "number") {
-            value = parseFloat(data.value);
+            debt[data.name] = parseFloat(data.value);
         } else {
-            value = data.value;
+            debt[data.name] = data.value;
         }
 
         this.setState({
-            [data.name]: value
+            debt: debt
         });
     }
 
@@ -435,7 +429,7 @@ function DebtCards(props) {
                     <Card.Header>
                         <div>Add Debt</div>
                         <div className="icon">
-                            <Icon name="add circle" size="huge" />
+                            <Icon name="add circle" size="massive" />
                         </div>
                     </Card.Header>
                 </Card.Content>
@@ -453,6 +447,8 @@ class DebtCard extends Component {
     }
 
     handleIncludedChanged(e) {
+        e.stopPropagation();
+        
         this.props.onIncludedChanged(e, { debtName: this.props.name });
     }
 
