@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Accordion, Button, Card, Checkbox, Divider, Dropdown, Form, Grid, Header, Icon, Modal, Segment, Table } from 'semantic-ui-react';
+import { Accordion, Button, Card, Checkbox, Divider, Dropdown, Form, Grid, Header, Icon, Modal, Segment, Statistic, Table } from 'semantic-ui-react';
 import { CurrencyFormatter, CurrencyFormField, PercentageFormatter, PercentageFormField } from './Formatting.js';
 import { DebtList } from './DebtList.js';
 import { DebtCalculator } from './DebtCalculator.js';
@@ -70,7 +70,7 @@ class DebtCalculatorApp extends Component {
     }
 
     handleAddDebt(e, debt) {
-        let debtList = JSON.parse(JSON.stringify(this.state.debtList));
+        let debtList = new DebtList(JSON.parse(JSON.stringify(this.state.debtList.debts)));
         debtList.add(debt);
         this.setState({
             debtList: debtList,
@@ -91,7 +91,7 @@ class DebtCalculatorApp extends Component {
     }
 
     handleIncludedChanged(e, data) {
-        let debtList = JSON.parse(JSON.stringify(this.state.debtList));
+        let debtList = new DebtList(JSON.parse(JSON.stringify(this.state.debtList.debts)));
         debtList.toggleIncludeFlag(data.debtName);
         this.setState({ debtList: debtList });
     }
@@ -134,7 +134,7 @@ class DebtCalculatorApp extends Component {
             sortDirection = (data.sortedColumn === currentSortedColumn) ? (sortDirection + 1) % 3 : SortDirection.ascending;
         }
 
-        let debtList = JSON.parse(JSON.stringify(this.state.debtList));
+        let debtList = new DebtList(JSON.parse(JSON.stringify(this.state.debtList.debts)));
         debtList.sort(data.sortedColumn, sortDirection);
 
         this.setState({
@@ -149,6 +149,7 @@ class DebtCalculatorApp extends Component {
             <Segment>
                 <DebtHeading title="Debt Calculator" subHeading="Calculate how long until you are DEBT FREE!" iconName="calculator" />
                 <Divider />
+                <DebtSummary {...this.state.debtList.amortizationSummary} />
                 <DebtCards debts={this.state.debtList.debts} debtFilter={this.state.debtFilter} sortedColumn={this.state.sortedColumn} sortDirection={this.state.sortDirection}
                     onAddDebtClick={this.handleDebtFormShow} onCardClick={this.handleCardClick} onSortByColumn={this.handleSortByColumn} onIncludedChanged={this.handleIncludedChanged} /> 
                 <Transition animation="swing up" duration={800} visible={this.state.addingDebt}>
@@ -191,6 +192,56 @@ function DebtHeading(props) {
             </Header.Subheader>
         </Header>
     );
+}
+
+class DebtSummary extends Component {
+
+    render() {
+        return (
+            <Segment>
+                <Grid columns="six">
+                    <Grid.Row>
+                        <Grid.Column>
+                            <Statistic size="tiny">
+                                <Statistic.Label>Total Debt</Statistic.Label>
+                                <Statistic.Value><CurrencyFormatter value={this.props.totalDebt} /></Statistic.Value>
+                            </Statistic>
+                        </Grid.Column>
+                        <Grid.Column>
+                            <Statistic size="tiny">
+                                <Statistic.Label>Total Payment</Statistic.Label>
+                                <Statistic.Value><CurrencyFormatter value={this.props.totalPayment} /></Statistic.Value>
+                            </Statistic>
+                        </Grid.Column>
+                        <Grid.Column>
+                            <Statistic size="tiny">
+                                <Statistic.Label>Interest</Statistic.Label>
+                                <Statistic.Value><CurrencyFormatter value={this.props.expectedInterest} /></Statistic.Value>
+                            </Statistic>
+                        </Grid.Column>
+                        <Grid.Column>
+                            <Statistic size="tiny">
+                                <Statistic.Label>Interest</Statistic.Label>
+                                <Statistic.Value><CurrencyFormatter value={this.props.actualInterest} /></Statistic.Value>
+                            </Statistic>
+                        </Grid.Column>
+                        <Grid.Column>
+                            <Statistic size="tiny">
+                                <Statistic.Label>Savings</Statistic.Label>
+                                <Statistic.Value><CurrencyFormatter value={this.props.expectedInterest - this.props.actualInterest} /></Statistic.Value>
+                            </Statistic>
+                        </Grid.Column>
+                        <Grid.Column>
+                            <Statistic size="tiny">
+                                <Statistic.Label>{Math.ceil(this.props.actualDebtLife) === 1 ? "Month" : "Months"}</Statistic.Label>
+                                <Statistic.Value>{Math.ceil(this.props.actualDebtLife)}</Statistic.Value>
+                            </Statistic>
+                        </Grid.Column>
+                    </Grid.Row>
+                </Grid>
+            </Segment>
+        );
+    }
 }
 
 class DebtForm extends Component {
@@ -446,7 +497,7 @@ class DebtCard extends Component {
                                 <Grid.Column>
                                     <div className="debtValue">
                                         <div className="value">{Math.ceil(this.props.actualDebtLife)}</div>
-                                        <div className="label">{Math.ceil(this.props.debtLife) === 1 ? "Month" : "Months"}</div>
+                                        <div className="label">{Math.ceil(this.props.actualDebtLife) === 1 ? "Month" : "Months"}</div>
                                     </div>
                                 </Grid.Column>
                             </Grid.Row>

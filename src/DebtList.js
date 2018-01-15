@@ -1,9 +1,11 @@
 import { SortDirection } from './SortDirection.js';
+import { AmortizationSummary } from './AmortizationSummary.js';
 
 export class DebtList {
     constructor(debts) {
         this.debts = debts;
         this.aggregateAmortization = undefined;
+        this.amortizationSummary = undefined;
     }
 
     add(debt) {
@@ -14,8 +16,13 @@ export class DebtList {
         let totalPayment = extraPayment ? extraPayment : 0.0, maxDebtLife = 0.0;
         let debtData = [];
 
+        this.amortizationSummary = new AmortizationSummary();
+
         for (let i = 0, debtCount = this.debts.length; i < debtCount; i++) {
             if (this.debts[i].included) {
+                this.amortizationSummary.totalDebt += this.debts[i].balance;
+                this.amortizationSummary.expectedInterest += this.debts[i].interest;
+
                 this.debts[i].actualInterest = 0.0;
                 this.debts[i].actualDebtLife = Math.ceil(this.debts[i].debtLife);
                 this.debts[i].newAmortization = new Array(this.debts[i].actualDebtLife);
@@ -32,6 +39,10 @@ export class DebtList {
             }
         }
 
+        this.amortizationSummary.totalPayment = totalPayment;
+        this.amortizationSummary.expectedDebtLife = maxDebtLife;
+        this.amortizationSummary.actualDebtLife = maxDebtLife;
+        
         this.aggregateAmortization = new Array(Math.ceil(maxDebtLife));
         let payment = { paymentNumber: 0 };
 
@@ -51,6 +62,8 @@ export class DebtList {
 
                 const debt = this.debts[debtData[i].debtIndex];
                 debt.actualInterest += interest;
+
+                this.amortizationSummary.actualInterest += interest;
 
                 debt.newAmortization[payment.paymentNumber - 1] = {
                     paymentNumber: payment.paymentNumber,
@@ -120,6 +133,7 @@ export class DebtList {
         }
 
         if (payment.paymentNumber < maxDebtLife) {
+            this.amortizationSummary.actualDebtLife = payment.paymentNumber;
             this.aggregateAmortization = this.aggregateAmortization.slice(0, payment.paymentNumber);
         }
     }
