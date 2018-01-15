@@ -278,7 +278,7 @@ class DebtForm extends Component {
 
         const amortizationResults = DebtCalculator.buildAmortizationWithTotals(debt.balance, debt.interestRate, debt.minimumPayment, debt.debtLife);
         debt.amortization = amortizationResults.amortization;
-        debt.interest = amortizationResults.interest;
+        debt.interest = amortizationResults.totals.interest;
 
         this.props.onAddDebt(e, debt);
     }
