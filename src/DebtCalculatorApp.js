@@ -1,6 +1,29 @@
+/*
+Notes:
+- Create cards of plan options where the user may select in the basic option.  In advance, go back to what we are currently doing
+- Slider for payment to see how it changes savings
+- Sticky summary, not sure about mobile
+- Pull snowball toggle to summary area
+- Create multiple plans to compare against
+- When selecting a single debt, include debt name in the details
+- Add a payment column instead of extra payment to allow the user to adjust
+- After first debt, move header to smaller icon title label in the top left, replace the original header with a prominent total balance and other key indicator below
+- Allow the user to drag card order
+- Turn into a step-by-step
+    1. Add Debts
+    2. See Plan
+    3. Execute
+- unsplash.com
+
+Intent:
+- Create a plan
+- Motivate the user to stay on target based on their personality, e.g. how long to payoff each debt, how long to be debt free, how much interest they are currently paying, how much they will save, etc.
+- Be as easy to use and understand as possible, less thinking more doing
+*/
 import React, { Component } from 'react';
 import { Accordion, Button, Card, Checkbox, Divider, Dropdown, Form, Grid, Header, Icon, Modal, Segment, Statistic, Table } from 'semantic-ui-react';
 import { CurrencyFormatter, CurrencyFormField, PercentageFormatter, PercentageFormField } from './Formatting.js';
+import { Tooltip } from './Controls.js';
 import { Debt } from './Debt.js';
 import { DebtList } from './DebtList.js';
 import { DebtCalculator } from './DebtCalculator.js';
@@ -165,7 +188,7 @@ class DebtCalculatorApp extends Component {
                     </Modal>
                 </Transition>
                 <Divider horizontal />
-                <Header as="h2" attached="top" inverted content="Details" />
+                <Header as="h2" attached="top" inverted content={"Debt-Free Plan for " + (this.state.debtFilter ? this.state.debtFilter : "All")} />
                 <Segment attached>
                     <Segment>
                         <Accordion panels={[ {
@@ -460,7 +483,9 @@ class DebtCard extends Component {
         return (
             <Card className="debt" raised color={this.props.name === this.props.debtFilter ? "blue" : undefined} onClick={this.handleCardClicked}>
                 <Card.Content>
-                    <Checkbox className="include" toggle checked={this.props.included} onChange={this.handleIncludedChanged} />
+                    <Tooltip className="include" text={"Click to " + (this.props.included ? " exclude" : "include")}>
+                        <Checkbox toggle checked={this.props.included} onChange={this.handleIncludedChanged} />
+                    </Tooltip>
                     <Card.Header>
                         {this.props.name}
                     </Card.Header>
