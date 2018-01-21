@@ -12,7 +12,7 @@ export class DebtList {
         this.debts.push(debt);
     }
 
-    buildAmortizations(enableSnowball, extraPayment) {
+    buildAmortizations(enableRollingPayments, extraPayment) {
         let totalPayment = extraPayment ? extraPayment : 0.0, maxDebtLife = 0.0;
         let debtData = [];
 
@@ -80,7 +80,7 @@ export class DebtList {
                 debtData[i].remainingBalance -= principal;
 
                 if (debtData[i].remainingBalance <= 0.0) {
-                    if (!enableSnowball) {
+                    if (!enableRollingPayments) {
                         totalPayment -= debtData[i].minimumPayment;
                         partialPayment += (interest + principal);
                     }
@@ -112,7 +112,7 @@ export class DebtList {
                 debtPayment.endingBalance -= locExtraPayment;
 
                 if (debtData[i].remainingBalance <= 0.0) {
-                    if (!enableSnowball) {
+                    if (!enableRollingPayments) {
                         totalPayment -= debtData[i].minimumPayment;
                     }
 
@@ -136,6 +136,14 @@ export class DebtList {
             this.amortizationSummary.actualDebtLife = payment.paymentNumber;
             this.aggregateAmortization = this.aggregateAmortization.slice(0, payment.paymentNumber);
         }
+    }
+
+    getAmortizationSummary(enableRollingPayments, extraPayment) {
+        if (!this.aggregateAmortization) {
+            this.buildAmortizations(enableRollingPayments, extraPayment);
+        }
+
+        return this.amortizationSummary;
     }
 
     sort(property, direction) {

@@ -59,13 +59,13 @@ export class DebtCalculator {
         return { amortization, totals };
     }
 
-    static buildAggregateAmortization(debts, enableSnowball, extraPayment) {
+    static buildAggregateAmortization(debts, enableRollingPayments, extraPayment) {
         let locDebts = JSON.parse(JSON.stringify(debts));
 
-        return DebtCalculator.buildAggregateAmortizationAndUpdateDebts(locDebts, enableSnowball, extraPayment);
+        return DebtCalculator.buildAggregateAmortizationAndUpdateDebts(locDebts, enableRollingPayments, extraPayment);
     }
 
-    static addAmortizationToDebts(debts, enableSnowball, extraPayment) {
+    static addAmortizationToDebts(debts, enableRollingPayments, extraPayment) {
         let totalPayment = extraPayment ? extraPayment : 0.0, maxDebtLife = 0.0;
         let debtData = [];
 
@@ -120,7 +120,7 @@ export class DebtCalculator {
                 debtData[i].remainingBalance -= principal;
 
                 if (debtData[i].remainingBalance <= 0.0) {
-                    if (!enableSnowball) {
+                    if (!enableRollingPayments) {
                         totalPayment -= debtData[i].minimumPayment;
                         partialPayment += (interest + principal);
                     }
@@ -152,7 +152,7 @@ export class DebtCalculator {
                 debtPayment.endingBalance -= locExtraPayment;
 
                 if (debtData[i].remainingBalance <= 0.0) {
-                    if (!enableSnowball) {
+                    if (!enableRollingPayments) {
                         totalPayment -= debtData[i].minimumPayment;
                     }
 
@@ -179,7 +179,7 @@ export class DebtCalculator {
         return amortization;
     }
 
-    static buildAggregateAmortizationAndUpdateDebts(debts, enableSnowball, extraPayment) {
+    static buildAggregateAmortizationAndUpdateDebts(debts, enableRollingPayments, extraPayment) {
         let totalPayment = extraPayment ? extraPayment : 0.0, maxDebtLife = 0.0;
         let debtData = [];
 
@@ -234,7 +234,7 @@ export class DebtCalculator {
                 debtData[i].remainingBalance -= principal;
 
                 if (debtData[i].remainingBalance <= 0.0) {
-                    if (!enableSnowball) {
+                    if (!enableRollingPayments) {
                         totalPayment -= debtData[i].minimumPayment;
                         partialPayment += (interest + principal);
                     }
@@ -266,7 +266,7 @@ export class DebtCalculator {
                 debtPayment.endingBalance -= locExtraPayment;
 
                 if (debtData[i].remainingBalance <= 0.0) {
-                    if (!enableSnowball) {
+                    if (!enableRollingPayments) {
                         totalPayment -= debtData[i].minimumPayment;
                     }
 
