@@ -1,5 +1,11 @@
 .heading {
-    margin-top: 10px;
+    border-bottom: 1px solid;
+    border-color: rgba(34,36,38,.15);
+    margin: 0px 15px;
+}
+
+.content {
+    margin: 185px 15px 10px 15px;
 }
 
 .card .include {
@@ -67,4 +73,13 @@
 .tooltip:hover .tooltiptext {
     visibility: visible;
     opacity: 1;
+}
+
+.sticky {
+  position: fixed;
+  top: 0;
+  margin: 0px auto;
+  z-index: 1000;
+  width: 100%;
+  background-color:  #FFFFFF;
 }

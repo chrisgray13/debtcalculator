@@ -21,7 +21,7 @@ Intent:
 - Be as easy to use and understand as possible, less thinking more doing
 */
 import React, { Component } from 'react';
-import { Accordion, Button, Card, Checkbox, Divider, Dropdown, Form, Grid, Header, Icon, Modal, Segment, Statistic, Table } from 'semantic-ui-react';
+import { Accordion, Button, Card, Checkbox, Divider, Form, Grid, Header, Icon, Modal, Rail, Segment, Statistic, Table } from 'semantic-ui-react';
 import { CurrencyFormatter, CurrencyFormField, PercentageFormatter, PercentageFormField } from './Formatting.js';
 import { Tooltip } from './Controls.js';
 import { Debt } from './Debt.js';
@@ -193,46 +193,88 @@ class DebtCalculatorApp extends Component {
 
     render() {
         return (
-            <Segment>
-                <DebtHeading title="Debt Calculator" subHeading="Calculate how long until you are DEBT FREE!" iconName="calculator" />
-                <Divider />
-                <Segment>
-                    <PayoffPlanCards debts={this.state.debtList.debts} payoffPlanFilter={this.state.payoffPlanFilter} onCardClick={this.handlePlanCardClick} />
-                </Segment>
-                <DebtSummary {...this.state.debtList.amortizationSummary} />
-                <DebtCards debts={this.state.debtList.debts} debtFilter={this.state.debtFilter} sortColumn={this.state.sortColumn} sortDirection={this.state.sortDirection}
-                    onAddDebtClick={this.handleDebtFormShow} onCardClick={this.handleDebtCardClick} onSortByColumn={this.handleSortByColumn} onIncludedChanged={this.handleIncludedChanged} /> 
-                <Transition animation="swing up" duration={800} visible={this.state.addingDebt}>
-                    <Modal open={this.state.addingDebt} onClose={this.handleDebtFormShow}>
-                        <Modal.Header>
-                            Add a debt
-                            <h4>Please fill out the form to include a debt in your debt-free plan!</h4>
-                        </Modal.Header>
-                        <Modal.Content>
-                            <DebtForm key={this.state.debtList.debts.length + 1} onAddDebt={this.handleAddDebt} />
-                        </Modal.Content>
-                    </Modal>
-                </Transition>
-                <Divider horizontal />
-                <Header as="h2" attached="top" inverted content={"Debt-Free Plan for " + (this.state.debtFilter ? this.state.debtFilter : "All")} />
-                <Segment attached>
-                    <Segment>
-                        <Accordion panels={[ {
-                            title: "Payoff Settings",
-                            content: {
-                                key: 'payoffSettings',
-                                content: (<DebtPayoffSettings enableRollingPayments={this.state.enableRollingPayments} payoffPlanFilter={this.state.payoffPlanFilter} onFormChange={this.handleFormChange} />)
-                            }
-                        } ]} />
+            <div>
+                <div className="sticky">
+                    <div className="heading">
+                        <DebtHeading title="Debt Calculator" compact={this.state.debtList.debts.length > 0} subHeading="Calculate how long until you are DEBT FREE!" iconName="calculator" />
+                    </div>
+                </div>
+                <div className="content">
+                    <DebtSummary {...this.state.debtList.amortizationSummary} />
+                    <DebtCards debts={this.state.debtList.debts} debtFilter={this.state.debtFilter} sortColumn={this.state.sortColumn} sortDirection={this.state.sortDirection}
+                        onAddDebtClick={this.handleDebtFormShow} onCardClick={this.handleDebtCardClick} onSortByColumn={this.handleSortByColumn} onIncludedChanged={this.handleIncludedChanged} /> 
+                    <Transition animation="swing up" duration={800} visible={this.state.addingDebt}>
+                        <Modal open={this.state.addingDebt} onClose={this.handleDebtFormShow}>
+                            <Modal.Header>
+                                Add a debt
+                                <h4>Please fill out the form to include a debt in your debt-free plan!</h4>
+                            </Modal.Header>
+                            <Modal.Content>
+                                <DebtForm key={this.state.debtList.debts.length + 1} onAddDebt={this.handleAddDebt} />
+                            </Modal.Content>
+                        </Modal>
+                    </Transition>
+                    <Divider horizontal />
+                    <Header as="h2" attached="top" inverted content={"Debt-Free Plan for " + (this.state.debtFilter ? this.state.debtFilter : "All")} />
+                    <Segment attached>
+                        <Segment>
+                            <Accordion panels={[ {
+                                title: "Payoff Settings",
+                                content: {
+                                    key: 'payoffSettings',
+                                    content: (<PayoffPlanCards debts={this.state.debtList.debts} payoffPlanFilter={this.state.payoffPlanFilter} onCardClick={this.handlePlanCardClick} />
+    )
+                                }
+                            } ]} />
+                        </Segment>
+                        <DebtPayoffSchedule amortization={this.state.amortization} enableRollingPayments={this.state.enableRollingPayments} extraPayment={this.state.extraPayment} />
                     </Segment>
-                    <DebtPayoffSchedule amortization={this.state.amortization} enableRollingPayments={this.state.enableRollingPayments} extraPayment={this.state.extraPayment} />
-                </Segment>
-            </Segment>
+                </div>
+            </div>
         );
     }
 }
 
 function DebtHeading(props) {
+    const {className, ...other} = props;
+
+    return (
+        <div className={className}>
+            {!other.compact && <DebtTitleHeading {...other} />}
+            {other.compact &&
+                <React.Fragment>
+                    <Rail position="left">
+                        <DebtTitleCompactHeading title={other.title} iconName={other.iconName} />
+                    </Rail>
+                    <DebtTitleInfoHeading {...other} />
+                </React.Fragment>
+            }
+        </div>
+    );
+}
+
+function DebtTitleHeading(props) {
+    return (
+        <Header as="h2" icon textAlign="center">
+            <Icon name={props.iconName} />
+            {props.title}
+            <Header.Subheader>
+                {props.subHeading}
+            </Header.Subheader>
+        </Header>
+    );
+}
+
+function DebtTitleCompactHeading(props) {
+    return (
+        <Header as="h3" textAlign="left">
+            <Icon name={props.iconName} />
+            {props.title}
+        </Header>
+    );
+}
+
+function DebtTitleInfoHeading(props) {
     return (
         <Header as="h2" icon textAlign="center">
             <Icon name={props.iconName} />
@@ -650,6 +692,7 @@ class DebtCard extends Component {
     }
 }
 
+/*
 function DebtPayoffSettings(props) {
     const payoffPlans = [
         { text: PayoffPlan.Minimum.displayText, value: PayoffPlan.Minimum.name },
@@ -673,7 +716,7 @@ function DebtPayoffSettings(props) {
         </Form>
     );
 }
-
+ */
 class DebtPayoffSchedule extends Component {
     render() {
         const showExtraPayment = this.props.enableRollingPayments || (this.props.extraPayment > 0.0);
