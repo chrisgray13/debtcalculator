@@ -22,12 +22,13 @@ Intent:
 */
 import React, { Component } from 'react';
 import { Accordion, Button, Card, Checkbox, Divider, Form, Grid, Header, Icon, Modal, Rail, Segment, Statistic, Table } from 'semantic-ui-react';
-import { CurrencyFormatter, CurrencyFormField, PercentageFormatter, PercentageFormField } from './Formatting.js';
+import { CurrencyFormatter, CurrencyFormField, PercentageFormatter, PercentageFormField, SimpleDateFormatter } from './Formatting.js';
 import { Tooltip } from './Controls.js';
 import { Debt } from './Debt.js';
 import { DebtList } from './DebtList.js';
 import { DebtCalculator } from './DebtCalculator.js';
 import { PayoffPlan, SortDirection } from './SortDirection.js';
+import { SimpleDate } from './SimpleDate.js';
 import './Debt.css';
 import Transition from 'semantic-ui-react/dist/commonjs/modules/Transition/Transition';
 
@@ -36,11 +37,11 @@ class DebtCalculatorApp extends Component {
         super(props);
 
         let debtList = new DebtList([
-            { name: "Home Depot", balance: 1200.00, interestRate: .085, minimumPayment: 54.00, debtLife: 24.265, interest: 110.38, included: true, payoffOrder: 1, amortization: [] },
-            { name: "Medical Bill", balance: 3000.00, interestRate: 0.0, minimumPayment: 250.00, debtLife: 12, interest: 0.0, included: true, payoffOrder: 2, amortization: [] },
-            { name: "American Express", balance: 5700.00, interestRate: .12, minimumPayment: 102.00, debtLife: 82.239, interest: 2688.46, included: true, payoffOrder: 3, amortization: [] },
-            { name: "Student Loan", balance: 12500.00, interestRate: 0.08, minimumPayment: 151.66, debtLife: 120, interest: 5699.03, included: true, payoffOrder: 4, amortization: [] },
-            { name: "Toyota", balance: 17800.00, interestRate: 0.15, minimumPayment: 617.05, debtLife: 36, interest: 4413.5, included: true, payoffOrder: 5, amortization: [] }
+            { name: "Home Depot", createdDate: '2017-01', balance: 1200.00, interestRate: .085, minimumPayment: 54.00, debtLife: 24.265, interest: 110.38, included: true, payoffOrder: 1, amortization: [] },
+            { name: "Medical Bill", createdDate: '2017-01', balance: 3000.00, interestRate: 0.0, minimumPayment: 250.00, debtLife: 12, interest: 0.0, included: true, payoffOrder: 2, amortization: [] },
+            { name: "American Express", createdDate: '2017-01', balance: 5700.00, interestRate: .12, minimumPayment: 102.00, debtLife: 82.239, interest: 2688.46, included: true, payoffOrder: 3, amortization: [] },
+            { name: "Student Loan", createdDate: '2017-01', balance: 12500.00, interestRate: 0.08, minimumPayment: 151.66, debtLife: 120, interest: 5699.03, included: true, payoffOrder: 4, amortization: [] },
+            { name: "Toyota", createdDate: '2017-11', balance: 17800.00, interestRate: 0.15, minimumPayment: 617.05, debtLife: 36, interest: 4413.5, included: true, payoffOrder: 5, amortization: [] }
         ]);
 
         const enableRollingPayments = false;
@@ -124,9 +125,13 @@ class DebtCalculatorApp extends Component {
 
     handlePlanCardClick(e, data) {
         let payoffPlanFilter = this.state.payoffPlanFilter;
+        let debtList = new DebtList(JSON.parse(JSON.stringify(this.state.debtList.debts)));
 
         if (payoffPlanFilter === data.payoffPlanName) {
+            debtList.sort(undefined, SortDirection.none);
+
             this.setState({
+                debtList: debtList,
                 enableRollingPayments: false,
                 payoffPlanFilter: undefined,
                 sortColumn: undefined,
@@ -134,7 +139,11 @@ class DebtCalculatorApp extends Component {
             });
         } else {
             const payoffPlan = PayoffPlan[data.payoffPlanName];
+
+            debtList.sort(payoffPlan.sortColumn, payoffPlan.sortDirection);
+
             this.setState({
+                debtList: debtList,
                 enableRollingPayments: payoffPlan.enableRollingPayments,
                 payoffPlanFilter: payoffPlan.name,
                 sortColumn: payoffPlan.sortColumn,
@@ -199,7 +208,7 @@ class DebtCalculatorApp extends Component {
                         <DebtHeading title="Debt Calculator" compact={this.state.debtList.debts.length > 0} subHeading="Calculate how long until you are DEBT FREE!" iconName="calculator" />
                     </div>
                 </div>
-                <div className="content">
+                <div className="mainContent">
                     <DebtSummary {...this.state.debtList.amortizationSummary} />
                     <DebtCards debts={this.state.debtList.debts} debtFilter={this.state.debtFilter} sortColumn={this.state.sortColumn} sortDirection={this.state.sortDirection}
                         onAddDebtClick={this.handleDebtFormShow} onCardClick={this.handleDebtCardClick} onSortByColumn={this.handleSortByColumn} onIncludedChanged={this.handleIncludedChanged} /> 
@@ -421,8 +430,8 @@ class DebtForm extends Component {
     addDebt(e) {
         let debt = Object.assign({}, this.state.debt);
 
+        debt.createdDate = SimpleDate.today();
         debt.payoffOrder = this.props.key;
-        debt.debtDate = (debt.debtDate) ? debt.debtDate : new Date();
         debt.interestRate = debt.interestRate / 100.0;
 
         if (!debt.minimumPayment) {
@@ -726,9 +735,11 @@ class DebtPayoffSchedule extends Component {
                 <Table.Header>
                     <Table.Row>
                         <Table.HeaderCell>Payment #</Table.HeaderCell>
+                        <Table.HeaderCell>Payment Date</Table.HeaderCell>
                         <Table.HeaderCell>Beginning Balance</Table.HeaderCell>
                         <Table.HeaderCell>Interest</Table.HeaderCell>
                         <Table.HeaderCell>Principal</Table.HeaderCell>
+                        <Table.HeaderCell>Payment</Table.HeaderCell>
                         { showExtraPayment && <Table.HeaderCell>Extra Payment</Table.HeaderCell> }
                         <Table.HeaderCell>Ending Balance</Table.HeaderCell>
                     </Table.Row>
@@ -749,9 +760,11 @@ function DebtPayment(props) {
     return (
         <Table.Row>
             <Table.Cell>{props.paymentNumber}</Table.Cell>
+            <Table.Cell><SimpleDateFormatter value={props.paymentDate} /></Table.Cell>
             <Table.Cell><CurrencyFormatter value={props.beginningBalance} /></Table.Cell>
             <Table.Cell><CurrencyFormatter value={props.interest} /></Table.Cell>
             <Table.Cell><CurrencyFormatter value={props.principal} /></Table.Cell>
+            <Table.Cell><CurrencyFormatter value={props.totalPayment} /></Table.Cell>
             { props.showExtraPayment && <Table.Cell><CurrencyFormatter value={props.extraPayment} /></Table.Cell> }
             <Table.Cell><CurrencyFormatter value={props.endingBalance} /></Table.Cell>
         </Table.Row>

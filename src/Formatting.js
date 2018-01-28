@@ -1,13 +1,12 @@
 import React from 'react';
 import { Form, Input, Label } from 'semantic-ui-react';
+import { SimpleDate } from './SimpleDate.js';
 
-export function CurrencyFormatter(props)
-{
+export function CurrencyFormatter(props) {
     return ("$" + (Math.round(props.value * 100.0) / 100.0).toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,'));
 }
 
-export function CurrencyFormField(props)
-{
+export function CurrencyFormField(props) {
     const { name, label, onChange, hideLabel, ...other } = props;
 
     return (
@@ -21,13 +20,25 @@ export function CurrencyFormField(props)
     );
 }
 
-export function PercentageFormatter(props)
-{
+export function DateFormatter(props) {
+    let month = (props.value.getMonth() + 1).toString();
+
+    if (month.length === 1) {
+        month = "0" + month;
+    }
+
+    return (month + "-" + props.value.getFullYear().toString());
+}
+
+export function SimpleDateFormatter(props) {
+    return SimpleDate.toMonthYearString(props.value);
+}
+
+export function PercentageFormatter(props) {
     return ((props.value * 100).toString() + "%");
 }
 
-export function PercentageFormField(props)
-{
+export function PercentageFormField(props) {
     const { name, label, onChange, ...other } = props;
 
     return (
