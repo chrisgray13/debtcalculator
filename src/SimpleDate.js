@@ -16,9 +16,7 @@ export class SimpleDate {
     }
 
     static fromDate(date) {
-        const month = date.getMonth();
-
-        return date.getFullYear() + "-" + ((month.length === 1) ? "0" + month : month);
+        return SimpleDate.fromYearMonth(date.getFullYear(), date.getMonth() + 1);
     }
 
     static fromYearMonth(year, month) {
@@ -40,7 +38,7 @@ export class SimpleDate {
         };
     }
 
-    static today() {
+    static thisMonth() {
         return SimpleDate.fromDate(new Date());
     }
 

@@ -9,5 +9,11 @@ export class AmortizationSummary {
 
         this.expectedDebtLife = 0.0;
         this.actualDebtLife = 0.0;
+
+        this.remainingBalance = 0.0;
+        this.remainingLife = 0;
+        this.remainingDebts = 0;
+
+        this.currentPaymentNumber = 0;
     }
 }

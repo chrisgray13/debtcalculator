@@ -21,7 +21,7 @@ Intent:
 - Be as easy to use and understand as possible, less thinking more doing
 */
 import React, { Component } from 'react';
-import { Accordion, Button, Card, Checkbox, Divider, Form, Grid, Header, Icon, Modal, Rail, Segment, Statistic, Table } from 'semantic-ui-react';
+import { Accordion, Button, Card, Checkbox, Divider, Form, Grid, Header, Icon, Label, Modal, Segment, Statistic, Table } from 'semantic-ui-react';
 import { CurrencyFormatter, CurrencyFormField, PercentageFormatter, PercentageFormField, SimpleDateFormatter } from './Formatting.js';
 import { Tooltip } from './Controls.js';
 import { Debt } from './Debt.js';
@@ -205,13 +205,28 @@ class DebtCalculatorApp extends Component {
             <div>
                 <div className="sticky">
                     <div className="heading">
-                        <DebtHeading title="Debt Calculator" compact={this.state.debtList.debts.length > 0} subHeading="Calculate how long until you are DEBT FREE!" iconName="calculator" />
+                        <DebtHeading title="Debt Calculator" compact={this.state.debtList.debts.length > 0}
+                            subHeading="Calculate how long until you are DEBT FREE!" iconName="calculator"
+                            summary={this.state.debtList.amortizationSummary} />
                     </div>
                 </div>
                 <div className="mainContent">
-                    <DebtSummary {...this.state.debtList.amortizationSummary} />
-                    <DebtCards debts={this.state.debtList.debts} debtFilter={this.state.debtFilter} sortColumn={this.state.sortColumn} sortDirection={this.state.sortDirection}
-                        onAddDebtClick={this.handleDebtFormShow} onCardClick={this.handleDebtCardClick} onSortByColumn={this.handleSortByColumn} onIncludedChanged={this.handleIncludedChanged} /> 
+                    <DebtSummary {...this.state.debtList.amortizationSummary}>
+                        <div className="container separator">
+                            <Accordion panels={[{
+                                title: "Debt Details",
+                                content: {
+                                    key: 'debtDetails',
+                                    content: (
+                                        <DebtCards debts={this.state.debtList.debts} debtFilter={this.state.debtFilter}
+                                            sortColumn={this.state.sortColumn} sortDirection={this.state.sortDirection}
+                                            onAddDebtClick={this.handleDebtFormShow} onCardClick={this.handleDebtCardClick}
+                                            onSortByColumn={this.handleSortByColumn} onIncludedChanged={this.handleIncludedChanged} /> 
+                                    )
+                                }
+                            }]} />
+                        </div>
+                    </DebtSummary>
                     <Transition animation="swing up" duration={800} visible={this.state.addingDebt}>
                         <Modal open={this.state.addingDebt} onClose={this.handleDebtFormShow}>
                             <Modal.Header>
@@ -228,15 +243,18 @@ class DebtCalculatorApp extends Component {
                     <Segment attached>
                         <Segment>
                             <Accordion panels={[ {
-                                title: "Payoff Settings",
+                                title: "Debt Free Plans",
                                 content: {
-                                    key: 'payoffSettings',
-                                    content: (<PayoffPlanCards debts={this.state.debtList.debts} payoffPlanFilter={this.state.payoffPlanFilter} onCardClick={this.handlePlanCardClick} />
-    )
+                                    key: 'debtFreePlans',
+                                    content: (
+                                        <PayoffPlanCards debts={this.state.debtList.debts} payoffPlanFilter={this.state.payoffPlanFilter}
+                                            onCardClick={this.handlePlanCardClick} />
+                                    )
                                 }
                             } ]} />
                         </Segment>
-                        <DebtPayoffSchedule amortization={this.state.amortization} enableRollingPayments={this.state.enableRollingPayments} extraPayment={this.state.extraPayment} />
+                        <DebtPayoffSchedule amortization={this.state.amortization}
+                            enableRollingPayments={this.state.enableRollingPayments} extraPayment={this.state.extraPayment} />
                     </Segment>
                 </div>
             </div>
@@ -245,17 +263,15 @@ class DebtCalculatorApp extends Component {
 }
 
 function DebtHeading(props) {
-    const {className, ...other} = props;
-
     return (
-        <div className={className}>
-            {!other.compact && <DebtTitleHeading {...other} />}
-            {other.compact &&
+        <div>
+            {!props.compact && <DebtTitleHeading {...props} />}
+            {props.compact &&
                 <React.Fragment>
-                    <Rail position="left">
-                        <DebtTitleCompactHeading title={other.title} iconName={other.iconName} />
-                    </Rail>
-                    <DebtTitleInfoHeading {...other} />
+                    <div className="left">
+                        <DebtTitleCompactHeading title={props.title} iconName={props.iconName} />
+                    </div>
+                    <DebtTitleInfoHeading {...props} />
                 </React.Fragment>
             }
         </div>
@@ -285,11 +301,10 @@ function DebtTitleCompactHeading(props) {
 
 function DebtTitleInfoHeading(props) {
     return (
-        <Header as="h2" icon textAlign="center">
-            <Icon name={props.iconName} />
-            {props.title}
+        <Header as="h1" textAlign="center">
+            <CurrencyFormatter value={props.summary.remainingBalance} />
             <Header.Subheader>
-                {props.subHeading}
+                {props.summary.remainingLife} to go!
             </Header.Subheader>
         </Header>
     );
@@ -297,15 +312,17 @@ function DebtTitleInfoHeading(props) {
 
 class PayoffPlanCards extends Component {
     render() {
+        const {payoffPlanFilter, ...others} = {...this.props};
+
         return (
             <Card.Group>
-                <PayoffPlanCard {...this.props} payoffPlan={PayoffPlan.Minimum}>
+                <PayoffPlanCard {...others} payoffPlanFilter={payoffPlanFilter || PayoffPlan.Minimum.name} payoffPlan={PayoffPlan.Minimum}>
                     Standard plan making the basic minimum payments on each until paid.  This method will take the longest and cost you the most
                 </PayoffPlanCard>
-                <PayoffPlanCard {...this.props} payoffPlan={PayoffPlan.QuickestWins}>
+                <PayoffPlanCard {...others} payoffPlanFilter={payoffPlanFilter} payoffPlan={PayoffPlan.QuickestWins}>
                     Optimized plan allowing you to focus on the smallest bills first to gain quick wins to help build momentum.  As debts are paid in full, the payments are rolled into the next debt payment like a snowball rolling down a hill
                 </PayoffPlanCard>
-                <PayoffPlanCard {...this.props} payoffPlan={PayoffPlan.GreatestSavings}>
+                <PayoffPlanCard {...others} payoffPlanFilter={payoffPlanFilter} payoffPlan={PayoffPlan.GreatestSavings}>
                     Maximized plan allowing you to minimize the overall time and cost.  This is not for the faint of heart as it requires grit and determination to stick to the plan until the end
                 </PayoffPlanCard>
             </Card.Group>
@@ -409,6 +426,7 @@ class DebtSummary extends Component {
                             </Statistic>
                         </Grid.Column>
                     </Grid.Row>
+                    {this.props.children && (<Grid.Row>{this.props.children}</Grid.Row>)}
                 </Grid>
             </Segment>
         );
@@ -430,7 +448,7 @@ class DebtForm extends Component {
     addDebt(e) {
         let debt = Object.assign({}, this.state.debt);
 
-        debt.createdDate = SimpleDate.today();
+        debt.createdDate = SimpleDate.thisMonth();
         debt.payoffOrder = this.props.key;
         debt.interestRate = debt.interestRate / 100.0;
 
@@ -729,9 +747,10 @@ function DebtPayoffSettings(props) {
 class DebtPayoffSchedule extends Component {
     render() {
         const showExtraPayment = this.props.enableRollingPayments || (this.props.extraPayment > 0.0);
+        const currentPaymentDate = SimpleDate.thisMonth();
 
         return (
-            <Table celled>
+            <Table celled striped>
                 <Table.Header>
                     <Table.Row>
                         <Table.HeaderCell>Payment #</Table.HeaderCell>
@@ -747,7 +766,8 @@ class DebtPayoffSchedule extends Component {
                 <Table.Body>
                     {
                         this.props.amortization.map((payment) =>
-                            <DebtPayment key={payment.paymentNumber} showExtraPayment={showExtraPayment} {...payment} />
+                            <DebtPayment key={payment.paymentNumber} current={payment.paymentDate === currentPaymentDate}
+                                showExtraPayment={showExtraPayment} {...payment} />
                         )
                     }
                 </Table.Body>
@@ -758,8 +778,10 @@ class DebtPayoffSchedule extends Component {
 
 function DebtPayment(props) {
     return (
-        <Table.Row>
-            <Table.Cell>{props.paymentNumber}</Table.Cell>
+        <Table.Row className={props.current ? "currentPaymentRow" : ""}>
+            <Table.Cell>
+                {(props.current && (<Label ribbon>Current</Label>)) || props.paymentNumber}
+            </Table.Cell>
             <Table.Cell><SimpleDateFormatter value={props.paymentDate} /></Table.Cell>
             <Table.Cell><CurrencyFormatter value={props.beginningBalance} /></Table.Cell>
             <Table.Cell><CurrencyFormatter value={props.interest} /></Table.Cell>

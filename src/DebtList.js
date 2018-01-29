@@ -15,7 +15,7 @@ export class DebtList {
     }
 
     buildAmortizations(enableRollingPayments, extraPayment) {
-        let latestPaymentDate = "1980-12", earliestPaymentDate = SimpleDate.today();
+        let latestPaymentDate = "1980-12", earliestPaymentDate = SimpleDate.thisMonth();
         let debtData = [];
 
         extraPayment = extraPayment ? extraPayment : 0.0;
@@ -76,13 +76,17 @@ export class DebtList {
 
                     this.amortizationSummary.actualInterest += interest;
 
-                    debt.newAmortization[paymentNumber - 1] = new Payment();
-                    debt.newAmortization[paymentNumber - 1].paymentNumber = payment.paymentNumber;
-                    debt.newAmortization[paymentNumber - 1].paymentDate = payment.paymentDatey;
-                    debt.newAmortization[paymentNumber - 1].beginningBalance = debtData[j].remainingBalance;
-                    debt.newAmortization[paymentNumber - 1].interest = interest;
-                    debt.newAmortization[paymentNumber - 1].principal = principal;
-                    debt.newAmortization[paymentNumber - 1].endingBalance = debtData[j].remainingBalance - principal;
+                    const debtPayment = new Payment();
+                    debtPayment.paymentNumber = payment.paymentNumber;
+                    debtPayment.paymentDate = payment.paymentDate;
+                    debtPayment.beginningBalance = debtData[j].remainingBalance;
+                    debtPayment.interest = interest;
+                    debtPayment.principal = principal;
+                    debtPayment.endingBalance = debtData[j].remainingBalance - principal;
+                    debtPayment.regularPayment = interest + principal;
+                    debtPayment.totalPayment = debtPayment.regularPayment;
+                    debtPayment.debtCount = 1;
+                    debt.newAmortization[paymentNumber - 1] = debtPayment;
 
                     payment.beginningBalance += debtData[j].remainingBalance;
                     payment.interest += interest;
@@ -121,6 +125,7 @@ export class DebtList {
                     const debtPayment = debt.newAmortization[paymentNumber - 1];
                     debtPayment.extraPayment = locExtraPayment;
                     debtPayment.endingBalance -= locExtraPayment;
+                    debtPayment.totalPayment += locExtraPayment;
 
                     if (debtData[k].remainingBalance <= 0.0) {
                         if (enableRollingPayments) {
@@ -142,8 +147,16 @@ export class DebtList {
             payment.totalPayment = payment.regularPayment + payment.extraPayment;
             payment.endingBalance = payment.beginningBalance - (payment.principal + payment.extraPayment);
 
+            if (payment.paymentDate === SimpleDate.thisMonth()) {
+                this.amortizationSummary.remainingBalance = payment.beginningBalance;
+                this.amortizationSummary.remainingDebts = payment.debtCount;
+                this.amortizationSummary.currentPaymentNumber = payment.paymentNumber;
+            }
+
             this.aggregateAmortization[paymentNumber - 1] = payment;
         }
+
+        this.amortizationSummary.remainingLife = this.amortizationSummary.expectedDebtLife - this.amortizationSummary.currentPaymentNumber;
 
         // Step 3:  Taking care of early payoff
         if (paymentNumber < this.amortizationSummary.expectedDebtLife) {
