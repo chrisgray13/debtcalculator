@@ -16,4 +16,22 @@ export class AmortizationSummary {
 
         this.currentPaymentNumber = 0;
     }
+
+    initializeWithDebt(debt) {
+        this.totalDebt = debt.balance;
+        this.totalPayment = debt.minimumPayment;
+        this.expectedInterest = debt.interest;
+        this.expectedDebtLife = Math.ceil(debt.debtLife);
+        this.actualDebtLife = this.expectedDebtLife;  // Setting just in case it does not change
+    }
+}
+
+export class Amortization {
+    constructor(enableRollingPayments, extraPayment, expectedPayments) {
+        this.enableRollingPayments = enableRollingPayments;
+        this.extraPayment = extraPayment;
+
+        this.payments = new Array(expectedPayments ? expectedPayments : 0);
+        this.summary = new AmortizationSummary();
+    }
 }

@@ -9,6 +9,16 @@
     margin: 0px 15px;
 }
 
+.heading .focalText {
+    font-family: 'Abril Fatface', Fallback, sans-serif;
+    font-size: 4rem;
+}
+
+.heading .indicator {
+    width: 20rem;
+    margin: 10px auto;    
+}
+
 .mainContent {
     margin: 185px 15px 10px 15px;
 }
@@ -100,5 +110,5 @@
 }
 
 .currentPaymentRow {
-    background-color: #77AA44;
+    background-color: #77AA44 !important;
 }

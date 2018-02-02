@@ -17,6 +17,10 @@ export class DebtCalculator {
         return (-1.0 * Math.log(1 - ((periodicInterest * balance) / minimumPayment))) / Math.log(1 + periodicInterest);
     }
 
+    static calculateTotalInterst(balance, interestRate, minimumPayment, debtLife) {
+        return DebtCalculator.buildAmortizationWithTotals(balance, interestRate, minimumPayment, debtLife).totals.interest;
+    }
+
     static buildAmortization(balance, interestRate, minimumPayment, debtLife) {
         return DebtCalculator.buildAmortizationWithTotals(balance, interestRate, minimumPayment, debtLife).amortization;
     }
@@ -73,7 +77,7 @@ export class DebtCalculator {
             if (debts[i].included) {
                 debts[i].actualInterest = 0.0;
                 debts[i].actualDebtLife = Math.ceil(debts[i].debtLife);
-                debts[i].newAmortization = new Array(debts[i].actualDebtLife);
+                debts[i].amortization = new Array(debts[i].actualDebtLife);
 
                 totalPayment += debts[i].minimumPayment;
                 maxDebtLife = Math.max(debts[i].debtLife, maxDebtLife);
@@ -107,7 +111,7 @@ export class DebtCalculator {
                 const debt = debts[debtData[i].debtIndex];
                 debt.actualInterest += interest;
 
-                debt.newAmortization[payment.paymentNumber - 1] = {
+                debt.amortization[payment.paymentNumber - 1] = {
                     beginningBalance: debtData[i].remainingBalance,
                     interest: interest,
                     principal: principal,
@@ -126,7 +130,7 @@ export class DebtCalculator {
                     }
 
                     if (payment.paymentNumber < debt.debtLife) {
-                        debt.newAmortization = debt.newAmortization.slice(0, payment.paymentNumber);
+                        debt.amortization = debt.amortization.slice(0, payment.paymentNumber);
                         debt.actualDebtLife = payment.paymentNumber;
                     }
 
@@ -147,7 +151,7 @@ export class DebtCalculator {
                 partialPayment -= locExtraPayment;
 
                 const debt = debts[debtData[i].debtIndex];
-                const debtPayment = debt.newAmortization[payment.paymentNumber - 1];
+                const debtPayment = debt.amortization[payment.paymentNumber - 1];
                 debtPayment.extraPayment = locExtraPayment;
                 debtPayment.endingBalance -= locExtraPayment;
 
@@ -157,7 +161,7 @@ export class DebtCalculator {
                     }
 
                     if (payment.paymentNumber < debt.debtLife) {
-                        debt.newAmortization = debt.newAmortization.slice(0, payment.paymentNumber);
+                        debt.amortization = debt.amortization.slice(0, payment.paymentNumber);
                         debt.actualDebtLife = payment.paymentNumber;
                     }
 
@@ -187,7 +191,7 @@ export class DebtCalculator {
             if (debts[i].included) {
                 debts[i].actualInterest = 0.0;
                 debts[i].actualDebtLife = Math.ceil(debts[i].debtLife);
-                debts[i].newAmortization = new Array(debts[i].actualDebtLife);
+                debts[i].amortization = new Array(debts[i].actualDebtLife);
 
                 totalPayment += debts[i].minimumPayment;
                 maxDebtLife = Math.max(debts[i].debtLife, maxDebtLife);
@@ -221,7 +225,7 @@ export class DebtCalculator {
                 const debt = debts[debtData[i].debtIndex];
                 debt.actualInterest += interest;
 
-                debt.newAmortization[payment.paymentNumber - 1] = {
+                debt.amortization[payment.paymentNumber - 1] = {
                     beginningBalance: debtData[i].remainingBalance,
                     interest: interest,
                     principal: principal,
@@ -240,7 +244,7 @@ export class DebtCalculator {
                     }
 
                     if (payment.paymentNumber < debt.debtLife) {
-                        debt.newAmortization = debt.newAmortization.slice(0, payment.paymentNumber);
+                        debt.amortization = debt.amortization.slice(0, payment.paymentNumber);
                         debt.actualDebtLife = payment.paymentNumber;
                     }
 
@@ -261,7 +265,7 @@ export class DebtCalculator {
                 partialPayment -= locExtraPayment;
 
                 const debt = debts[debtData[i].debtIndex];
-                const debtPayment = debt.newAmortization[payment.paymentNumber - 1];
+                const debtPayment = debt.amortization[payment.paymentNumber - 1];
                 debtPayment.extraPayment = locExtraPayment;
                 debtPayment.endingBalance -= locExtraPayment;
 
@@ -271,7 +275,7 @@ export class DebtCalculator {
                     }
 
                     if (payment.paymentNumber < debt.debtLife) {
-                        debt.newAmortization = debt.newAmortization.slice(0, payment.paymentNumber);
+                        debt.amortization = debt.amortization.slice(0, payment.paymentNumber);
                         debt.actualDebtLife = payment.paymentNumber;
                     }
 

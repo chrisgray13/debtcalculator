@@ -15,13 +15,18 @@ Notes:
     3. Execute
 - unsplash.com
 
+Components:
+- Debt List
+- Amortization Summary
+- Amortization Schedule
+
 Intent:
 - Create a plan
 - Motivate the user to stay on target based on their personality, e.g. how long to payoff each debt, how long to be debt free, how much interest they are currently paying, how much they will save, etc.
 - Be as easy to use and understand as possible, less thinking more doing
 */
 import React, { Component } from 'react';
-import { Accordion, Button, Card, Checkbox, Divider, Form, Grid, Header, Icon, Label, Modal, Segment, Statistic, Table } from 'semantic-ui-react';
+import { Accordion, Button, Card, Checkbox, Divider, Form, Grid, Header, Icon, Label, Modal, Progress, Segment, Statistic, Table } from 'semantic-ui-react';
 import { CurrencyFormatter, CurrencyFormField, PercentageFormatter, PercentageFormField, SimpleDateFormatter } from './Formatting.js';
 import { Tooltip } from './Controls.js';
 import { Debt } from './Debt.js';
@@ -37,29 +42,29 @@ class DebtCalculatorApp extends Component {
         super(props);
 
         let debtList = new DebtList([
-            { name: "Home Depot", createdDate: '2017-01', balance: 1200.00, interestRate: .085, minimumPayment: 54.00, debtLife: 24.265, interest: 110.38, included: true, payoffOrder: 1, amortization: [] },
-            { name: "Medical Bill", createdDate: '2017-01', balance: 3000.00, interestRate: 0.0, minimumPayment: 250.00, debtLife: 12, interest: 0.0, included: true, payoffOrder: 2, amortization: [] },
-            { name: "American Express", createdDate: '2017-01', balance: 5700.00, interestRate: .12, minimumPayment: 102.00, debtLife: 82.239, interest: 2688.46, included: true, payoffOrder: 3, amortization: [] },
-            { name: "Student Loan", createdDate: '2017-01', balance: 12500.00, interestRate: 0.08, minimumPayment: 151.66, debtLife: 120, interest: 5699.03, included: true, payoffOrder: 4, amortization: [] },
-            { name: "Toyota", createdDate: '2017-11', balance: 17800.00, interestRate: 0.15, minimumPayment: 617.05, debtLife: 36, interest: 4413.5, included: true, payoffOrder: 5, amortization: [] }
+            { name: "Home Depot", createdDate: '2017-01', balance: 1200.00, interestRate: .085, minimumPayment: 54.00, debtLife: 24.265, interest: 110.38, included: true, payoffOrder: 1 },
+            { name: "Medical Bill", createdDate: '2017-01', balance: 3000.00, interestRate: 0.0, minimumPayment: 250.00, debtLife: 12, interest: 0.0, included: true, payoffOrder: 2 },
+            { name: "American Express", createdDate: '2017-01', balance: 5700.00, interestRate: .12, minimumPayment: 102.00, debtLife: 82.239, interest: 2688.46, included: true, payoffOrder: 3 },
+            { name: "Student Loan", createdDate: '2017-01', balance: 12500.00, interestRate: 0.08, minimumPayment: 151.66, debtLife: 120, interest: 5699.03, included: true, payoffOrder: 4 },
+            { name: "Toyota", createdDate: '2017-11', balance: 17800.00, interestRate: 0.15, minimumPayment: 617.05, debtLife: 36, interest: 4413.5, included: true, payoffOrder: 5 }
         ]);
 
         const enableRollingPayments = false;
         const extraPayment = 0.0;
 
         debtList.buildAmortizations(enableRollingPayments, extraPayment);
-        const amortization = debtList.aggregateAmortization;
 
         this.state = {
             addingDebt: false,
-            debtList: debtList,
+            debts: debtList.debts,
             debtFilter: undefined,
-            enableRollingPayments: false,
-            extraPayment: 0.0,
-            payoffPlanFilter: undefined,
             sortColumn: undefined,
             sortDirection: SortDirection.none,
-            amortization: amortization
+            summary: debtList.amortization.summary,
+            amortization: debtList.amortization.payments,
+            payoffPlanFilter: undefined,
+            enableRollingPayments: enableRollingPayments,
+            extraPayment: extraPayment
         };
 
         this.handleAddDebt = this.handleAddDebt.bind(this);
@@ -75,32 +80,45 @@ class DebtCalculatorApp extends Component {
     setState(newState) {
         let debtList = undefined;
 
-        if (newState.debtList || newState.extraPayment || (newState.enableRollingPayments !== undefined)) {
-            const debtFilter = newState.hasOwnProperty("debtFilter") ? newState.debtFilter : this.state.debtFilter;
-            const enableRollingPayments = (newState.enableRollingPayments === undefined) ? this.state.enableRollingPayments : newState.enableRollingPayments;
-            const extraPayment = (newState.extraPayment) ? newState.extraPayment : this.state.extraPayment;
-            debtList = (newState.debtList) ? newState.debtList : new DebtList(JSON.parse(JSON.stringify(this.state.debtList.debts)));
+        if (newState.hasOwnProperty("sortColumn") || newState.hasOwnProperty("sortDirection")) {
+            debtList = new DebtList(JSON.parse(JSON.stringify(newState.debts ? newState.debts : this.state.debts)));
+            debtList.sort(newState.sortColumn, newState.sortDirection);
+            newState.debts = debtList.debts;
+        }
+
+        if (newState.hasOwnProperty("debts") || newState.hasOwnProperty("extraPayment") || newState.hasOwnProperty("enableRollingPayments")) {
+            const enableRollingPayments = newState.hasOwnProperty("enableRollingPayments") ? newState.enableRollingPayments : this.state.enableRollingPayments;
+            const extraPayment = newState.hasOwnProperty("extraPayment") ? newState.extraPayment : this.state.extraPayment;
+
+            if (!debtList) {
+                debtList = new DebtList(JSON.parse(JSON.stringify(newState.debts ? newState.debts : this.state.debts)));
+            }
 
             debtList.buildAmortizations(enableRollingPayments, extraPayment);
-            newState.debtList = debtList;
-            newState.amortization =
-                debtFilter ? debtList.debts.find((debt) => { return debt.name === debtFilter; }).newAmortization :
-                    debtList.aggregateAmortization;
-        } else if (newState.hasOwnProperty("debtFilter")) {
-            debtList = JSON.parse(JSON.stringify(this.state.debtList));
-            newState.amortization =
-                newState.debtFilter ? debtList.debts.find((debt) => { return debt.name === newState.debtFilter; }).newAmortization :
-                    debtList.aggregateAmortization;
+            newState.debts = debtList.debts;
+        }
+        
+        if (newState.hasOwnProperty("debts") || newState.hasOwnProperty("debtFilter")) {
+            if (!debtList) {
+                debtList = new DebtList(JSON.parse(JSON.stringify(newState.debts ? newState.debts : this.state.debts)));
+            }
+
+            const enableRollingPayments = newState.hasOwnProperty("enableRollingPayments") ? newState.enableRollingPayments : this.state.enableRollingPayments;
+            const extraPayment = newState.hasOwnProperty("extraPayment") ? newState.extraPayment : this.state.extraPayment;
+            const debtFilter = newState.hasOwnProperty("debtFilter") ? newState.debtFilter : this.state.debtFilter;
+            const amortization = debtList.getAmortization(enableRollingPayments, extraPayment, debtFilter);
+            newState.amortization = amortization.payments;
+            newState.summary = amortization.summary;
         }
 
         super.setState(newState);
     }
 
     handleAddDebt(e, debt) {
-        let debtList = new DebtList(JSON.parse(JSON.stringify(this.state.debtList.debts)));
-        debtList.add(debt);
+        let debts = JSON.parse(JSON.stringify(this.state.debts));
+        debts.add(debt);
         this.setState({
-            debtList: debtList,
+            debts: debts,
             addingDebt: false
         });
     }
@@ -118,20 +136,16 @@ class DebtCalculatorApp extends Component {
     }
 
     handleIncludedChanged(e, data) {
-        let debtList = new DebtList(JSON.parse(JSON.stringify(this.state.debtList.debts)));
+        let debtList = new DebtList(JSON.parse(JSON.stringify(this.state.debts)));
         debtList.toggleIncludeFlag(data.debtName);
-        this.setState({ debtList: debtList });
+        this.setState({ debts: debtList.debts });
     }
 
     handlePlanCardClick(e, data) {
         let payoffPlanFilter = this.state.payoffPlanFilter;
-        let debtList = new DebtList(JSON.parse(JSON.stringify(this.state.debtList.debts)));
 
         if (payoffPlanFilter === data.payoffPlanName) {
-            debtList.sort(undefined, SortDirection.none);
-
             this.setState({
-                debtList: debtList,
                 enableRollingPayments: false,
                 payoffPlanFilter: undefined,
                 sortColumn: undefined,
@@ -140,10 +154,7 @@ class DebtCalculatorApp extends Component {
         } else {
             const payoffPlan = PayoffPlan[data.payoffPlanName];
 
-            debtList.sort(payoffPlan.sortColumn, payoffPlan.sortDirection);
-
             this.setState({
-                debtList: debtList,
                 enableRollingPayments: payoffPlan.enableRollingPayments,
                 payoffPlanFilter: payoffPlan.name,
                 sortColumn: payoffPlan.sortColumn,
@@ -190,13 +201,9 @@ class DebtCalculatorApp extends Component {
             sortDirection = (data.sortColumn === currentSortColumn) ? (sortDirection + 1) % 3 : SortDirection.ascending;
         }
 
-        let debtList = new DebtList(JSON.parse(JSON.stringify(this.state.debtList.debts)));
-        debtList.sort(data.sortColumn, sortDirection);
-
         this.setState({
             sortColumn: data.sortColumn,
-            sortDirection: sortDirection,
-            debtList: debtList
+            sortDirection: sortDirection
         });
     }
 
@@ -205,20 +212,20 @@ class DebtCalculatorApp extends Component {
             <div>
                 <div className="sticky">
                     <div className="heading">
-                        <DebtHeading title="Debt Calculator" compact={this.state.debtList.debts.length > 0}
+                        <DebtHeading title="Debt Calculator" compact={this.state.debts.length > 0}
                             subHeading="Calculate how long until you are DEBT FREE!" iconName="calculator"
-                            summary={this.state.debtList.amortizationSummary} />
+                            summary={this.state.summary} />
                     </div>
                 </div>
                 <div className="mainContent">
-                    <DebtSummary {...this.state.debtList.amortizationSummary}>
+                    <DebtSummary {...this.state.summary}>
                         <div className="container separator">
                             <Accordion panels={[{
                                 title: "Debt Details",
                                 content: {
                                     key: 'debtDetails',
                                     content: (
-                                        <DebtCards debts={this.state.debtList.debts} debtFilter={this.state.debtFilter}
+                                        <DebtCards debts={this.state.debts} debtFilter={this.state.debtFilter}
                                             sortColumn={this.state.sortColumn} sortDirection={this.state.sortDirection}
                                             onAddDebtClick={this.handleDebtFormShow} onCardClick={this.handleDebtCardClick}
                                             onSortByColumn={this.handleSortByColumn} onIncludedChanged={this.handleIncludedChanged} /> 
@@ -234,7 +241,7 @@ class DebtCalculatorApp extends Component {
                                 <h4>Please fill out the form to include a debt in your debt-free plan!</h4>
                             </Modal.Header>
                             <Modal.Content>
-                                <DebtForm key={this.state.debtList.debts.length + 1} onAddDebt={this.handleAddDebt} />
+                                <DebtForm key={this.state.debts.length + 1} onAddDebt={this.handleAddDebt} />
                             </Modal.Content>
                         </Modal>
                     </Transition>
@@ -247,7 +254,7 @@ class DebtCalculatorApp extends Component {
                                 content: {
                                     key: 'debtFreePlans',
                                     content: (
-                                        <PayoffPlanCards debts={this.state.debtList.debts} payoffPlanFilter={this.state.payoffPlanFilter}
+                                        <PayoffPlanCards debts={this.state.debts} payoffPlanFilter={this.state.payoffPlanFilter}
                                             onCardClick={this.handlePlanCardClick} />
                                     )
                                 }
@@ -271,8 +278,8 @@ function DebtHeading(props) {
                     <div className="left">
                         <DebtTitleCompactHeading title={props.title} iconName={props.iconName} />
                     </div>
-                    <DebtTitleInfoHeading {...props} />
-                </React.Fragment>
+                {props.summary.remainingBalance ? <DebtTitleInfoHeading {...props} /> : <DebtFreeHeading />}
+                </React.Fragment>   
             }
         </div>
     );
@@ -302,10 +309,21 @@ function DebtTitleCompactHeading(props) {
 function DebtTitleInfoHeading(props) {
     return (
         <Header as="h1" textAlign="center">
-            <CurrencyFormatter value={props.summary.remainingBalance} />
+            <span className="focalText"><CurrencyFormatter value={props.summary.remainingBalance} /></span>
             <Header.Subheader>
-                {props.summary.remainingLife} to go!
+                {props.summary.remainingLife} {Math.ceil(props.summary.actualDebtLife) === 1 ? "month" : "months"} to go!
             </Header.Subheader>
+            <div className="indicator">
+                <Progress percent={Math.round((1.0 - (props.summary.remainingBalance / props.summary.totalDebt)) * 100.0)} size="small" color="blue" />
+            </div>
+        </Header>
+    );
+}
+
+function DebtFreeHeading(props) {
+    return (
+        <Header as="h1" textAlign="center">
+            <span className="focalText">DEBT FREE!</span>
         </Header>
     );
 }
@@ -345,7 +363,7 @@ class PayoffPlanCard extends Component {
     render() {
         let debtList = new DebtList(JSON.parse(JSON.stringify(this.props.debts)));
         debtList.sort(this.props.payoffPlan.sortColumn, this.props.payoffPlan.sortDirection);
-        const summary = debtList.getAmortizationSummary(this.props.payoffPlan.enableRollingPayments);
+        const amortization = debtList.getAmortization(this.props.payoffPlan.enableRollingPayments);
 
         return (
             <Card className="debt" centered raised color={this.props.payoffPlan.name === this.props.payoffPlanFilter ? "blue" : undefined} onClick={this.handleCardClicked}>
@@ -364,14 +382,14 @@ class PayoffPlanCard extends Component {
                         <Grid.Row>
                             <Grid.Column>
                                 <div className="debtValue">
-                                    <div className="value"><CurrencyFormatter value={summary.actualInterest} /></div>
+                                    <div className="value"><CurrencyFormatter value={amortization.summary.actualInterest} /></div>
                                     <div className="label">Interest</div>
                                 </div>
                             </Grid.Column>
                             <Grid.Column>
                                 <div className="debtValue">
-                                    <div className="value">{Math.ceil(summary.actualDebtLife)}</div>
-                                    <div className="label">{Math.ceil(summary.actualDebtLife) === 1 ? "Month" : "Months"}</div>
+                                    <div className="value">{Math.ceil(amortization.summary.actualDebtLife)}</div>
+                                    <div className="label">{Math.ceil(amortization.summary.actualDebtLife) === 1 ? "Month" : "Months"}</div>
                                 </div>
                             </Grid.Column>
                         </Grid.Row>
@@ -383,7 +401,6 @@ class PayoffPlanCard extends Component {
 }
 
 class DebtSummary extends Component {
-
     render() {
         return (
             <Segment>
@@ -458,9 +475,8 @@ class DebtForm extends Component {
             debt.debtLife = DebtCalculator.calculateDebtLife(debt.balance, debt.interestRate, debt.minimumPayment);
         }
 
-        const amortizationResults = DebtCalculator.buildAmortizationWithTotals(debt.balance, debt.interestRate, debt.minimumPayment, debt.debtLife);
-        debt.amortization = amortizationResults.amortization;
-        debt.interest = amortizationResults.totals.interest;
+        // Required to know expected interest
+        debt.interest = DebtCalculator.calculateTotalInterst(debt.balance, debt.interestRate, debt.minimumPayment, debt.debtLife);
 
         this.props.onAddDebt(e, debt);
     }
@@ -657,6 +673,7 @@ class DebtCard extends Component {
                     <Card.Meta>
                         Interest Rate <PercentageFormatter value={this.props.interestRate} />
                     </Card.Meta>
+                    <Progress percent={(1.0 - (this.props.amortization.summary.remainingBalance / this.props.balance)) * 100.0} attached="bottom" size="tiny" color="blue" />
                 </Card.Content>
                 <Card.Content>
                     <Card.Description>
@@ -670,20 +687,20 @@ class DebtCard extends Component {
                                 </Grid.Column>
                                 <Grid.Column>
                                     <div className="debtValue">
-                                        <div className="value"><CurrencyFormatter value={this.props.actualInterest} /></div>
+                                        <div className="value"><CurrencyFormatter value={this.props.amortization.summary.actualInterest} /></div>
                                         <div className="label">Interest</div>
                                     </div>
                                 </Grid.Column>
                                 <Grid.Column>
                                     <div className="debtValue">
-                                        <div className="value"><CurrencyFormatter value={this.props.interest - this.props.actualInterest} /></div>
+                                        <div className="value"><CurrencyFormatter value={this.props.interest - this.props.amortization.summary.actualInterest} /></div>
                                         <div className="label">Savings</div>
                                     </div>
                                 </Grid.Column>
                                 <Grid.Column>
                                     <div className="debtValue">
-                                        <div className="value">{Math.ceil(this.props.actualDebtLife)}</div>
-                                        <div className="label">{Math.ceil(this.props.actualDebtLife) === 1 ? "Month" : "Months"}</div>
+                                        <div className="value">{Math.ceil(this.props.amortization.summary.actualDebtLife)}</div>
+                                        <div className="label">{Math.ceil(this.props.amortization.summary.actualDebtLife) === 1 ? "Month" : "Months"}</div>
                                     </div>
                                 </Grid.Column>
                             </Grid.Row>
