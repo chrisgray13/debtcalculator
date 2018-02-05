@@ -7,16 +7,25 @@ export function CurrencyFormatter(props) {
 }
 
 export function CurrencyFormField(props) {
-    const { name, label, onChange, hideLabel, ...other } = props;
+    const { name, label, onChange, hideLabel, children, defaultValue, ...other } = props;
 
     return (
         <Form.Field {...other}>
             {!hideLabel && <label>{label}</label>}
-            <Input name={name} type="number" step=".01" labelPosition='left' placeholder={label} onChange={onChange}>
-                <Label>$</Label>
-                <input />
-            </Input>
+            <CurrencyInput name={name} defaultValue={defaultValue} placeholder={label} onChange={onChange}>
+                {children}    
+            </CurrencyInput>    
         </Form.Field>
+    );
+}
+
+export function CurrencyInput(props) {
+    return (
+        <Input name={props.name} type="number" step=".01" action={props.children !== undefined} labelPosition='left' defaultValue={props.defaultValue} placeholder={props.label} onChange={props.onChange}>
+            <Label>$</Label>
+            <input />
+            {props.children}
+        </Input>
     );
 }
 

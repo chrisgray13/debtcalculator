@@ -63,14 +63,14 @@ export class DebtCalculator {
         return { amortization, totals };
     }
 
-    static buildAggregateAmortization(debts, enableRollingPayments, extraPayment) {
+    static buildAggregateAmortization(debts, enableRollingPayments, extraPrincipalPayment) {
         let locDebts = JSON.parse(JSON.stringify(debts));
 
-        return DebtCalculator.buildAggregateAmortizationAndUpdateDebts(locDebts, enableRollingPayments, extraPayment);
+        return DebtCalculator.buildAggregateAmortizationAndUpdateDebts(locDebts, enableRollingPayments, extraPrincipalPayment);
     }
 
-    static addAmortizationToDebts(debts, enableRollingPayments, extraPayment) {
-        let totalPayment = extraPayment ? extraPayment : 0.0, maxDebtLife = 0.0;
+    static addAmortizationToDebts(debts, enableRollingPayments, extraPrincipalPayment) {
+        let totalPayment = extraPrincipalPayment ? extraPrincipalPayment : 0.0, maxDebtLife = 0.0;
         let debtData = [];
 
         for (let i = 0, debtCount = debts.length; i < debtCount; i++) {
@@ -101,7 +101,7 @@ export class DebtCalculator {
             payment.beginningBalance = 0.0;
             payment.interest = 0.0;
             payment.principal = 0.0;
-            payment.extraPayment = 0.0;
+            payment.extraPrincipalPayment = 0.0;
 
             // Handling the initial payment without considering snowballs or extra payment(s)
             for (let i = 0; i < debtDataLength; i++) {
@@ -145,15 +145,15 @@ export class DebtCalculator {
             // Looping back through to add any snowball or extra payment(s)
             partialPayment = totalPayment - (payment.regularPayment - partialPayment);
             for (let i = 0; i < debtDataLength && (partialPayment > 0); i++) {
-                const locExtraPayment = Math.min(debtData[i].remainingBalance, partialPayment);
-                payment.extraPayment += locExtraPayment;
-                debtData[i].remainingBalance -= locExtraPayment;
-                partialPayment -= locExtraPayment;
+                const locExtraPrincipalPayment = Math.min(debtData[i].remainingBalance, partialPayment);
+                payment.extraPrincipalPayment += locExtraPrincipalPayment;
+                debtData[i].remainingBalance -= locExtraPrincipalPayment;
+                partialPayment -= locExtraPrincipalPayment;
 
                 const debt = debts[debtData[i].debtIndex];
                 const debtPayment = debt.amortization[payment.paymentNumber - 1];
-                debtPayment.extraPayment = locExtraPayment;
-                debtPayment.endingBalance -= locExtraPayment;
+                debtPayment.extraPrincipalPayment = locExtraPrincipalPayment;
+                debtPayment.endingBalance -= locExtraPrincipalPayment;
 
                 if (debtData[i].remainingBalance <= 0.0) {
                     if (!enableRollingPayments) {
@@ -171,7 +171,7 @@ export class DebtCalculator {
                 }
             }
 
-            payment.endingBalance = payment.beginningBalance - (payment.principal + payment.extraPayment);
+            payment.endingBalance = payment.beginningBalance - (payment.principal + payment.extraPrincipalPayment);
 
             amortization[payment.paymentNumber - 1] = Object.assign({}, payment);
         }
@@ -183,8 +183,8 @@ export class DebtCalculator {
         return amortization;
     }
 
-    static buildAggregateAmortizationAndUpdateDebts(debts, enableRollingPayments, extraPayment) {
-        let totalPayment = extraPayment ? extraPayment : 0.0, maxDebtLife = 0.0;
+    static buildAggregateAmortizationAndUpdateDebts(debts, enableRollingPayments, extraPrincipalPayment) {
+        let totalPayment = extraPrincipalPayment ? extraPrincipalPayment : 0.0, maxDebtLife = 0.0;
         let debtData = [];
 
         for (let i = 0, debtCount = debts.length; i < debtCount; i++) {
@@ -215,7 +215,7 @@ export class DebtCalculator {
             payment.beginningBalance = 0.0;
             payment.interest = 0.0;
             payment.principal = 0.0;
-            payment.extraPayment = 0.0;
+            payment.extraPrincipalPayment = 0.0;
 
             // Handling the initial payment without considering snowballs or extra payment(s)
             for (let i = 0; i < debtDataLength; i++) {
@@ -259,15 +259,15 @@ export class DebtCalculator {
             // Looping back through to add any snowball or extra payment(s)
             partialPayment = totalPayment - (payment.regularPayment - partialPayment);
             for (let i = 0; i < debtDataLength && (partialPayment > 0); i++) {
-                const locExtraPayment = Math.min(debtData[i].remainingBalance, partialPayment);
-                payment.extraPayment += locExtraPayment;
-                debtData[i].remainingBalance -= locExtraPayment;
-                partialPayment -= locExtraPayment;
+                const locExtraPrincipalPayment = Math.min(debtData[i].remainingBalance, partialPayment);
+                payment.extraPrincipalPayment += locExtraPrincipalPayment;
+                debtData[i].remainingBalance -= locExtraPrincipalPayment;
+                partialPayment -= locExtraPrincipalPayment;
 
                 const debt = debts[debtData[i].debtIndex];
                 const debtPayment = debt.amortization[payment.paymentNumber - 1];
-                debtPayment.extraPayment = locExtraPayment;
-                debtPayment.endingBalance -= locExtraPayment;
+                debtPayment.extraPrincipalPayment = locExtraPrincipalPayment;
+                debtPayment.endingBalance -= locExtraPrincipalPayment;
 
                 if (debtData[i].remainingBalance <= 0.0) {
                     if (!enableRollingPayments) {
@@ -285,7 +285,7 @@ export class DebtCalculator {
                 }
             }
 
-            payment.endingBalance = payment.beginningBalance - (payment.principal + payment.extraPayment);
+            payment.endingBalance = payment.beginningBalance - (payment.principal + payment.extraPrincipalPayment);
 
             amortization[payment.paymentNumber - 1] = Object.assign({}, payment);
         }

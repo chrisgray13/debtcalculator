@@ -27,9 +27,9 @@ export class AmortizationSummary {
 }
 
 export class Amortization {
-    constructor(enableRollingPayments, extraPayment, expectedPayments) {
+    constructor(enableRollingPayments, extraPrincipalPayment, expectedPayments) {
         this.enableRollingPayments = enableRollingPayments;
-        this.extraPayment = extraPayment;
+        this.extraPrincipalPayment = extraPrincipalPayment;
 
         this.payments = new Array(expectedPayments ? expectedPayments : 0);
         this.summary = new AmortizationSummary();

@@ -37,12 +37,16 @@
     float: right;
 }
 
-.debt .debtValue {
+.card .cardValue {
     color: #000000;
 }
 
-.debt .header .icon {
+.card.debt .header .icon {
     text-align: center;
+}
+
+.card.debt .progress {
+    margin: .5rem 0 0 0 !important;
 }
 
 .modal .header {

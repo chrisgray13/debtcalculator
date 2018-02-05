@@ -12,5 +12,6 @@ export class Debt {
         this.included = true;
         this.payoffOrder = undefined;
         this.amortization = undefined;
+        this.extraPrincipalPayments = {};
     }
 }

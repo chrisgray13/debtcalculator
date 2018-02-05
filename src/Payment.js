@@ -7,7 +7,7 @@ export class Payment {
         this.principal = 0.0;
         this.endingBalance = 0.0;
         this.regularPayment = 0.0;
-        this.extraPayment = 0.0;
+        this.extraPrincipalPayment = 0.0;
         this.totalPayment = 0.0;
         this.debtCount = 0;
     }

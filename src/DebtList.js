@@ -13,14 +13,19 @@ export class DebtList {
         this.debts.push(debt);
     }
 
-    buildAmortizations(enableRollingPayments, extraPayment) {
+    addExtraPrincipalPayment(debtFilter, payment) {
+        let debt = this.debts.find((debt) => { return debt.name === debtFilter; });
+        debt.extraPrincipalPayments[payment.paymentDate] = payment.newExtraPrincipalPayment;
+    }
+
+    buildAmortizations(enableRollingPayments, extraPrincipalPayment) {
         let latestPaymentDate = "1980-12", earliestPaymentDate = SimpleDate.thisMonth();
         let debtData = [];
 
-        extraPayment = extraPayment ? extraPayment : 0.0;
+        extraPrincipalPayment = extraPrincipalPayment ? extraPrincipalPayment : 0.0;
 
-        this.amortization = new Amortization(enableRollingPayments, extraPayment);
-        this.amortization.summary.totalPayment = extraPayment;
+        this.amortization = new Amortization(enableRollingPayments, extraPrincipalPayment);
+        this.amortization.summary.totalPayment = extraPrincipalPayment;
 
         // Step 1:  Identify what debts are included, tag them with additional information, and compile some summary data
         for (let i = 0, debtCount = this.debts.length; i < debtCount; i++) {
@@ -29,7 +34,7 @@ export class DebtList {
                 this.amortization.summary.totalPayment += this.debts[i].minimumPayment;
                 this.amortization.summary.expectedInterest += this.debts[i].interest;
 
-                this.debts[i].amortization = new Amortization(enableRollingPayments, extraPayment, Math.ceil(this.debts[i].debtLife));
+                this.debts[i].amortization = new Amortization(enableRollingPayments, extraPrincipalPayment, Math.ceil(this.debts[i].debtLife));
                 this.debts[i].amortization.summary.initializeWithDebt(this.debts[i]);
 
                 earliestPaymentDate = (this.debts[i].createdDate < earliestPaymentDate) ? this.debts[i].createdDate : earliestPaymentDate;
@@ -70,7 +75,7 @@ export class DebtList {
                 }
             }
 
-            let totalPayment = extraPayment ? extraPayment : 0.0;
+            let totalPayment = extraPrincipalPayment ? extraPrincipalPayment : 0.0;
 
             // Step 2a:  Handling the initial payment without considering snowballs or extra payment(s)
             for (let j = 0; j < debtDataLength; j++) {
@@ -89,20 +94,22 @@ export class DebtList {
                     debtPayment.beginningBalance = debtData[j].remainingBalance;
                     debtPayment.interest = interest;
                     debtPayment.principal = principal;
-                    debtPayment.endingBalance = debtData[j].remainingBalance - principal;
+                    debtPayment.extraPrincipalPayment = debt.extraPrincipalPayments[debtPayment.paymentDate] ? debt.extraPrincipalPayments[debtPayment.paymentDate] : 0.00;
+                    debtPayment.endingBalance = debtData[j].remainingBalance - (principal + debtPayment.extraPrincipalPayment);
                     debtPayment.regularPayment = interest + principal;
-                    debtPayment.totalPayment = debtPayment.regularPayment;
+                    debtPayment.totalPayment = debtPayment.regularPayment + debtPayment.extraPrincipalPayment;
                     debtPayment.debtCount = 1;
                     debt.amortization.payments[paymentNumber - 1] = debtPayment;
 
                     payment.beginningBalance += debtData[j].remainingBalance;
-                    payment.interest += interest;
-                    payment.principal += principal;
-                    debtData[j].remainingBalance -= principal;
+                    payment.interest += debtPayment.interest;
+                    payment.principal += debtPayment.principal;
+                    payment.extraPrincipalPayment += debtPayment.extraPrincipalPayment;
+                    debtData[j].remainingBalance -= (debtPayment.principal + debtPayment.extraPrincipalPayment);
 
                     if (debtData[j].remainingBalance <= 0.0) {
                         if (enableRollingPayments) {
-                            extraPayment += debtData[j].minimumPayment;
+                            extraPrincipalPayment += debtData[j].minimumPayment;
                             totalPayment += debtData[j].minimumPayment - (interest + principal);
                         }
 
@@ -126,20 +133,20 @@ export class DebtList {
             // Step 2b:  Looping back through to add any rolling or extra payment(s)
             for (let k = 0; k < debtDataLength && (totalPayment > 0); k++) {
                 if (debtData[k].createdDate <= payment.paymentDate) {
-                    const locExtraPayment = Math.min(debtData[k].remainingBalance, totalPayment);
-                    payment.extraPayment += locExtraPayment;
-                    debtData[k].remainingBalance -= locExtraPayment;
-                    totalPayment -= locExtraPayment;
+                    const locExtraPrincipalPayment = Math.min(debtData[k].remainingBalance, totalPayment);
+                    payment.extraPrincipalPayment += locExtraPrincipalPayment;
+                    debtData[k].remainingBalance -= locExtraPrincipalPayment;
+                    totalPayment -= locExtraPrincipalPayment;
 
                     const debt = this.debts[debtData[k].debtIndex];
                     const debtPayment = debt.amortization.payments[paymentNumber - 1];
-                    debtPayment.extraPayment = locExtraPayment;
-                    debtPayment.endingBalance -= locExtraPayment;
-                    debtPayment.totalPayment += locExtraPayment;
+                    debtPayment.extraPrincipalPayment += locExtraPrincipalPayment;
+                    debtPayment.endingBalance -= locExtraPrincipalPayment;
+                    debtPayment.totalPayment += locExtraPrincipalPayment;
 
                     if (debtData[k].remainingBalance <= 0.0) {
                         if (enableRollingPayments) {
-                            extraPayment += debtData[k].minimumPayment;
+                            extraPrincipalPayment += debtData[k].minimumPayment;
                         }
 
                         if (paymentNumber < debt.debtLife) {
@@ -157,8 +164,8 @@ export class DebtList {
                 }
             }
 
-            payment.totalPayment = payment.regularPayment + payment.extraPayment;
-            payment.endingBalance = payment.beginningBalance - (payment.principal + payment.extraPayment);
+            payment.totalPayment = payment.regularPayment + payment.extraPrincipalPayment;
+            payment.endingBalance = payment.beginningBalance - (payment.principal + payment.extraPrincipalPayment);
 
             if (payment.paymentDate === SimpleDate.thisMonth()) {
                 this.amortization.summary.remainingBalance = payment.beginningBalance;
@@ -178,9 +185,9 @@ export class DebtList {
         this.amortization.summary.remainingLife = this.amortization.summary.actualDebtLife - this.amortization.summary.currentPaymentNumber;
     }
 
-    getAmortization(enableRollingPayments, extraPayment, debtFilter) {
-        if (!this.amortization || this.amortization.extraPayment !== extraPayment || this.amortization.enableRollingPayments !== extraPayment) {
-            this.buildAmortizations(enableRollingPayments, extraPayment);
+    getAmortization(enableRollingPayments, extraPrincipalPayment, debtFilter) {
+        if (!this.amortization || this.amortization.extraPrincipalPayment !== extraPrincipalPayment || this.amortization.enableRollingPayments !== extraPrincipalPayment) {
+            this.buildAmortizations(enableRollingPayments, extraPrincipalPayment);
         }
 
         if (debtFilter) {

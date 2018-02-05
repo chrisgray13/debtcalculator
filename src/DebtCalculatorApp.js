@@ -26,8 +26,8 @@ Intent:
 - Be as easy to use and understand as possible, less thinking more doing
 */
 import React, { Component } from 'react';
-import { Accordion, Button, Card, Checkbox, Divider, Form, Grid, Header, Icon, Label, Modal, Progress, Segment, Statistic, Table } from 'semantic-ui-react';
-import { CurrencyFormatter, CurrencyFormField, PercentageFormatter, PercentageFormField, SimpleDateFormatter } from './Formatting.js';
+import { Accordion, Button, Card, Checkbox, Divider, Form, Grid, Header, Icon, Input, Label, Modal, Progress, Segment, Statistic, Table } from 'semantic-ui-react';
+import { CurrencyFormatter, CurrencyFormField, CurrencyInput, PercentageFormatter, PercentageFormField, SimpleDateFormatter } from './Formatting.js';
 import { Tooltip } from './Controls.js';
 import { Debt } from './Debt.js';
 import { DebtList } from './DebtList.js';
@@ -42,17 +42,17 @@ class DebtCalculatorApp extends Component {
         super(props);
 
         let debtList = new DebtList([
-            { name: "Home Depot", createdDate: '2017-01', balance: 1200.00, interestRate: .085, minimumPayment: 54.00, debtLife: 24.265, interest: 110.38, included: true, payoffOrder: 1 },
-            { name: "Medical Bill", createdDate: '2017-01', balance: 3000.00, interestRate: 0.0, minimumPayment: 250.00, debtLife: 12, interest: 0.0, included: true, payoffOrder: 2 },
-            { name: "American Express", createdDate: '2017-01', balance: 5700.00, interestRate: .12, minimumPayment: 102.00, debtLife: 82.239, interest: 2688.46, included: true, payoffOrder: 3 },
-            { name: "Student Loan", createdDate: '2017-01', balance: 12500.00, interestRate: 0.08, minimumPayment: 151.66, debtLife: 120, interest: 5699.03, included: true, payoffOrder: 4 },
-            { name: "Toyota", createdDate: '2017-11', balance: 17800.00, interestRate: 0.15, minimumPayment: 617.05, debtLife: 36, interest: 4413.5, included: true, payoffOrder: 5 }
+            { name: "Home Depot", createdDate: '2017-01', balance: 1200.00, interestRate: .085, minimumPayment: 54.00, debtLife: 24.265, interest: 110.38, included: true, payoffOrder: 1, extraPrincipalPayments: {} },
+            { name: "Medical Bill", createdDate: '2017-01', balance: 3000.00, interestRate: 0.0, minimumPayment: 250.00, debtLife: 12, interest: 0.0, included: true, payoffOrder: 2, extraPrincipalPayments: {} },
+            { name: "American Express", createdDate: '2017-01', balance: 5700.00, interestRate: .12, minimumPayment: 102.00, debtLife: 82.239, interest: 2688.46, included: true, payoffOrder: 3, extraPrincipalPayments: {} },
+            { name: "Student Loan", createdDate: '2017-01', balance: 12500.00, interestRate: 0.08, minimumPayment: 151.66, debtLife: 120, interest: 5699.03, included: true, payoffOrder: 4, extraPrincipalPayments: {} },
+            { name: "Toyota", createdDate: '2017-11', balance: 17800.00, interestRate: 0.15, minimumPayment: 617.05, debtLife: 36, interest: 4413.5, included: true, payoffOrder: 5, extraPrincipalPayments: { "2017-12": 100.00, "2018-02": 125.00 } }
         ]);
 
         const enableRollingPayments = false;
-        const extraPayment = 0.0;
+        const extraPrincipalPayment = 0.0;
 
-        debtList.buildAmortizations(enableRollingPayments, extraPayment);
+        debtList.buildAmortizations(enableRollingPayments, extraPrincipalPayment);
 
         this.state = {
             addingDebt: false,
@@ -64,10 +64,11 @@ class DebtCalculatorApp extends Component {
             amortization: debtList.amortization.payments,
             payoffPlanFilter: undefined,
             enableRollingPayments: enableRollingPayments,
-            extraPayment: extraPayment
+            extraPrincipalPayment: extraPrincipalPayment
         };
 
         this.handleAddDebt = this.handleAddDebt.bind(this);
+        this.handleAddExtraPrincipalPayment = this.handleAddExtraPrincipalPayment.bind(this);
         this.handleDebtCardClick = this.handleDebtCardClick.bind(this);
         this.handleDebtFormShow = this.handleDebtFormShow.bind(this);
         this.handleFormChange = this.handleFormChange.bind(this);
@@ -86,15 +87,15 @@ class DebtCalculatorApp extends Component {
             newState.debts = debtList.debts;
         }
 
-        if (newState.hasOwnProperty("debts") || newState.hasOwnProperty("extraPayment") || newState.hasOwnProperty("enableRollingPayments")) {
+        if (newState.hasOwnProperty("debts") || newState.hasOwnProperty("extraPrincipalPayment") || newState.hasOwnProperty("enableRollingPayments")) {
             const enableRollingPayments = newState.hasOwnProperty("enableRollingPayments") ? newState.enableRollingPayments : this.state.enableRollingPayments;
-            const extraPayment = newState.hasOwnProperty("extraPayment") ? newState.extraPayment : this.state.extraPayment;
+            const extraPrincipalPayment = newState.hasOwnProperty("extraPrincipalPayment") ? newState.extraPrincipalPayment : this.state.extraPrincipalPayment;
 
             if (!debtList) {
                 debtList = new DebtList(JSON.parse(JSON.stringify(newState.debts ? newState.debts : this.state.debts)));
             }
 
-            debtList.buildAmortizations(enableRollingPayments, extraPayment);
+            debtList.buildAmortizations(enableRollingPayments, extraPrincipalPayment);
             newState.debts = debtList.debts;
         }
         
@@ -104,9 +105,9 @@ class DebtCalculatorApp extends Component {
             }
 
             const enableRollingPayments = newState.hasOwnProperty("enableRollingPayments") ? newState.enableRollingPayments : this.state.enableRollingPayments;
-            const extraPayment = newState.hasOwnProperty("extraPayment") ? newState.extraPayment : this.state.extraPayment;
+            const extraPrincipalPayment = newState.hasOwnProperty("extraPrincipalPayment") ? newState.extraPrincipalPayment : this.state.extraPrincipalPayment;
             const debtFilter = newState.hasOwnProperty("debtFilter") ? newState.debtFilter : this.state.debtFilter;
-            const amortization = debtList.getAmortization(enableRollingPayments, extraPayment, debtFilter);
+            const amortization = debtList.getAmortization(enableRollingPayments, extraPrincipalPayment, debtFilter);
             newState.amortization = amortization.payments;
             newState.summary = amortization.summary;
         }
@@ -120,6 +121,17 @@ class DebtCalculatorApp extends Component {
         this.setState({
             debts: debts,
             addingDebt: false
+        });
+    }
+
+    handleAddExtraPrincipalPayment(e, payment) {
+        let debtList = new DebtList(JSON.parse(JSON.stringify(this.state.debts)));
+        const debtFilter = this.state.debtFilter;
+
+        debtList.addExtraPrincipalPayment(debtFilter, payment);
+
+        this.setState({
+            debts: debtList.debts
         });
     }
 
@@ -260,8 +272,9 @@ class DebtCalculatorApp extends Component {
                                 }
                             } ]} />
                         </Segment>
-                        <DebtPayoffSchedule amortization={this.state.amortization}
-                            enableRollingPayments={this.state.enableRollingPayments} extraPayment={this.state.extraPayment} />
+                        <DebtPayoffSchedule amortization={this.state.amortization} enableEditMode={this.state.debtFilter !== undefined}
+                            enableRollingPayments={this.state.enableRollingPayments} extraPrincipalPayment={this.state.extraPrincipalPayment}
+                            onAddExtraPrincipalPayment={this.handleAddExtraPrincipalPayment} />
                     </Segment>
                 </div>
             </div>
@@ -335,13 +348,18 @@ class PayoffPlanCards extends Component {
         return (
             <Card.Group>
                 <PayoffPlanCard {...others} payoffPlanFilter={payoffPlanFilter || PayoffPlan.Minimum.name} payoffPlan={PayoffPlan.Minimum}>
-                    Standard plan making the basic minimum payments on each until paid.  This method will take the longest and cost you the most
+                    Standard plan making the basic minimum payments on each until paid.  This method 
+                    will take the longest and cost you the most<br /><br /><br /><br />
                 </PayoffPlanCard>
                 <PayoffPlanCard {...others} payoffPlanFilter={payoffPlanFilter} payoffPlan={PayoffPlan.QuickestWins}>
-                    Optimized plan allowing you to focus on the smallest bills first to gain quick wins to help build momentum.  As debts are paid in full, the payments are rolled into the next debt payment like a snowball rolling down a hill
+                    Optimized plan allowing you to focus on the smallest bills first to gain quick
+                    wins to help build momentum.  As debts are paid in full, the payments are rolled 
+                    into the next debt payment like a snowball rolling down a hill
                 </PayoffPlanCard>
                 <PayoffPlanCard {...others} payoffPlanFilter={payoffPlanFilter} payoffPlan={PayoffPlan.GreatestSavings}>
-                    Maximized plan allowing you to minimize the overall time and cost.  This is not for the faint of heart as it requires grit and determination to stick to the plan until the end
+                    Maximized plan allowing you to minimize the overall time and cost.  This is not 
+                    for the faint of heart as it requires grit and determination to stick to the plan 
+                    until the end<br /><br />
                 </PayoffPlanCard>
             </Card.Group>
         );
@@ -366,7 +384,7 @@ class PayoffPlanCard extends Component {
         const amortization = debtList.getAmortization(this.props.payoffPlan.enableRollingPayments);
 
         return (
-            <Card className="debt" centered raised color={this.props.payoffPlan.name === this.props.payoffPlanFilter ? "blue" : undefined} onClick={this.handleCardClicked}>
+            <Card className="plan" centered raised color={this.props.payoffPlan.name === this.props.payoffPlanFilter ? "blue" : undefined} onClick={this.handleCardClicked}>
                 <Card.Content textAlign="center">
                     <Card.Header>
                         {this.props.payoffPlan.displayText}
@@ -381,13 +399,13 @@ class PayoffPlanCard extends Component {
                     <Grid columns="two">
                         <Grid.Row>
                             <Grid.Column>
-                                <div className="debtValue">
+                                <div className="cardValue">
                                     <div className="value"><CurrencyFormatter value={amortization.summary.actualInterest} /></div>
                                     <div className="label">Interest</div>
                                 </div>
                             </Grid.Column>
                             <Grid.Column>
-                                <div className="debtValue">
+                                <div className="cardValue">
                                     <div className="value">{Math.ceil(amortization.summary.actualDebtLife)}</div>
                                     <div className="label">{Math.ceil(amortization.summary.actualDebtLife) === 1 ? "Month" : "Months"}</div>
                                 </div>
@@ -517,109 +535,7 @@ class DebtForm extends Component {
         );
     }
 }
-/*
-class SortableColumnHeader extends Component {
 
-    constructor(props) {
-        super(props);
-
-        this.handleClick = this.handleClick.bind(this);
-    }
-
-    handleClick(e) {
-        this.props.onSortByColumn(e, { sortColumn: this.props.name });
-    }
-
-    render() {
-        return (
-            <Table.HeaderCell sorted={((this.props.sortDirection === SortDirection.none) || (this.props.sortColumn !== this.props.name)) ? null : ((this.props.sortDirection === SortDirection.ascending) ? "ascending" : "descending")}
-                onClick={this.handleClick}>{this.props.children}</Table.HeaderCell>
-        );
-    }
-}
-
-function DebtList(props) {
-    return (
-      <Table sortable celled>
-        <Table.Header>
-          <Table.Row>
-            <Table.HeaderCell>Name</Table.HeaderCell>
-            <SortableColumnHeader name="balance" sortColumn={props.sortColumn} sortDirection={props.sortDirection} onSortByColumn={props.onSortByColumn}>Balance</SortableColumnHeader>
-            <SortableColumnHeader name="interestRate" sortColumn={props.sortColumn} sortDirection={props.sortDirection} onSortByColumn={props.onSortByColumn}>Interest Rate</SortableColumnHeader>
-            <Table.HeaderCell>Minimum Payment</Table.HeaderCell>
-            <Table.HeaderCell>Life of Debt</Table.HeaderCell>
-            <SortableColumnHeader name="payoffOrder" sortColumn={props.sortColumn} sortDirection={props.sortDirection} onSortByColumn={props.onSortByColumn}>Payoff Order</SortableColumnHeader>
-            <Table.HeaderCell>Include</Table.HeaderCell>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
-            {
-              props.debts.map((debt) =>
-                <Debt key={debt.name} {...debt} onIncludedChanged={props.onIncludedChanged} />
-              )
-            }
-        </Table.Body>
-        <Table.Footer>
-            <DebtFooter debts={props.debts} />
-        </Table.Footer>
-      </Table>
-    );
-}
-
-class Debt extends Component {
-    constructor(props) {
-        super(props);
-
-        this.handleIncludedChanged = this.handleIncludedChanged.bind(this);
-    }
-
-    handleIncludedChanged(e) {
-        this.props.onIncludedChanged(e, { debtName: this.props.name });
-    }
-
-    render() {
-        return (
-            <Table.Row>
-                <Table.Cell>{this.props.name}</Table.Cell>
-                <Table.Cell><CurrencyFormatter value={this.props.balance} /></Table.Cell>
-                <Table.Cell><PercentageFormatter value={this.props.interestRate} /></Table.Cell>
-                <Table.Cell><CurrencyFormatter value={this.props.minimumPayment} /></Table.Cell>
-                <Table.Cell>{Math.ceil(this.props.debtLife)}</Table.Cell>
-                <Table.Cell>{this.props.payoffOrder}</Table.Cell>
-                <Table.Cell><Checkbox toggle checked={this.props.included} onChange={this.handleIncludedChanged} /></Table.Cell>
-            </Table.Row>
-        );
-    }
-}
-
-class DebtFooter extends Component {
-
-    render() {
-        let balance = 0, minimumPayment = 0, debtLife = 0, count = 0;
-
-        this.props.debts.forEach((debt) => {
-            if (debt.included) {
-                balance += debt.balance;
-                minimumPayment += debt.minimumPayment;
-                debtLife = Math.max(debtLife, Math.ceil(debt.debtLife));
-                count++;
-            }
-        });
-
-        return (
-            <Table.Row>
-                <Table.HeaderCell>Total</Table.HeaderCell>
-                <Table.HeaderCell><CurrencyFormatter value={balance} /></Table.HeaderCell>
-                <Table.HeaderCell><PercentageFormatter value={.08} /></Table.HeaderCell>
-                <Table.HeaderCell><CurrencyFormatter value={minimumPayment} /></Table.HeaderCell>
-                <Table.HeaderCell>{debtLife}</Table.HeaderCell>
-                <Table.HeaderCell></Table.HeaderCell>
-                <Table.HeaderCell>{count}</Table.HeaderCell>
-            </Table.Row>
-            );
-    }
-}
-*/
 function DebtCards(props) {
     return (
         <Card.Group>
@@ -673,57 +589,57 @@ class DebtCard extends Component {
                     <Card.Meta>
                         Interest Rate <PercentageFormatter value={this.props.interestRate} />
                     </Card.Meta>
-                    <Progress percent={(1.0 - (this.props.amortization.summary.remainingBalance / this.props.balance)) * 100.0} attached="bottom" size="tiny" color="blue" />
                 </Card.Content>
                 <Card.Content>
                     <Card.Description>
                         <Grid columns="four">
                             <Grid.Row>
                                 <Grid.Column>
-                                    <div className="debtValue">
+                                    <div className="cardValue">
                                         <div className="value"><CurrencyFormatter value={this.props.interest} /></div>
                                         <div className="label">Interest</div>
                                     </div>
                                 </Grid.Column>
                                 <Grid.Column>
-                                    <div className="debtValue">
+                                    <div className="cardValue">
                                         <div className="value"><CurrencyFormatter value={this.props.amortization.summary.actualInterest} /></div>
                                         <div className="label">Interest</div>
                                     </div>
                                 </Grid.Column>
                                 <Grid.Column>
-                                    <div className="debtValue">
+                                    <div className="cardValue">
                                         <div className="value"><CurrencyFormatter value={this.props.interest - this.props.amortization.summary.actualInterest} /></div>
                                         <div className="label">Savings</div>
                                     </div>
                                 </Grid.Column>
                                 <Grid.Column>
-                                    <div className="debtValue">
+                                    <div className="cardValue">
                                         <div className="value">{Math.ceil(this.props.amortization.summary.actualDebtLife)}</div>
                                         <div className="label">{Math.ceil(this.props.amortization.summary.actualDebtLife) === 1 ? "Month" : "Months"}</div>
                                     </div>
                                 </Grid.Column>
                             </Grid.Row>
                         </Grid>
+                        <Progress percent={(1.0 - (this.props.amortization.summary.remainingBalance / this.props.balance)) * 100.0} size="tiny" color="blue" />
                     </Card.Description>
                 </Card.Content>
                 <Card.Content extra textAlign="center">
                     <Grid columns="three" divided>
                         <Grid.Row>
                             <Grid.Column>
-                                <div className="debtValue">
+                                <div className="cardValue">
                                     <div className="value"><CurrencyFormatter value={this.props.balance} /></div>
                                     <div className="label">Balance</div>
                                 </div>
                             </Grid.Column>
                             <Grid.Column>
-                                <div className="debtValue">
+                                <div className="cardValue">
                                     <div className="value"><CurrencyFormatter value={this.props.minimumPayment} /></div>
                                     <div className="label">Payment</div>
                                 </div>
                             </Grid.Column>
                             <Grid.Column>
-                                <div className="debtValue">
+                                <div className="cardValue">
                                     <div className="value">{Math.ceil(this.props.debtLife)}</div>
                                     <div className="label">{Math.ceil(this.props.debtLife) === 1 ? "Month" : "Months"}</div>
                                 </div>
@@ -736,34 +652,37 @@ class DebtCard extends Component {
     }
 }
 
-/*
-function DebtPayoffSettings(props) {
-    const payoffPlans = [
-        { text: PayoffPlan.Minimum.displayText, value: PayoffPlan.Minimum.name },
-        { text: PayoffPlan.QuickestWins.displayText, value: PayoffPlan.QuickestWins.name },
-        { text: PayoffPlan.GreatestSavings.displayText, value: PayoffPlan.GreatestSavings.name }
-    ];
-
-    return (
-        <Form>
-            <Form.Group>
-                <Form.Field width="3">
-                    <label>Payoff Method</label>
-                    <Dropdown placeholder='Select Payoff Method' fluid selection options={payoffPlans} value={props.payoffPlanFilter} onChange={props.onFormChange} />
-                </Form.Field>
-                <Form.Field width="3">
-                    <label>Enable Rolling Payments</label>
-                    <Checkbox name="enableRollingPayments" toggle checked={props.enableRollingPayments} onChange={props.onFormChange} />
-                </Form.Field>
-                <CurrencyFormField name="extraPayment" label="Extra Payment" width="3" onChange={props.onFormChange} />
-            </Form.Group>
-        </Form>
-    );
-}
- */
 class DebtPayoffSchedule extends Component {
+    constructor(props) {
+        super(props);
+
+        this.state = {
+            editedPayment: undefined
+        }
+
+        this.handleEnableEditMode = this.handleEnableEditMode.bind(this);
+        this.handleEdit = this.handleEdit.bind(this);
+    }
+
+    handleEnableEditMode(e, data) {
+        if (this.props.enableEditMode) {
+            this.setState({
+                editedPayment: data.paymentDate
+            });
+        }
+    }
+
+    handleEdit(e, payment) {
+        this.props.onAddExtraPrincipalPayment(e, payment);
+
+        // TODO:  Prop up payment date and payment
+        this.setState({
+            editedPayment: undefined
+        });
+    }
+
     render() {
-        const showExtraPayment = this.props.enableRollingPayments || (this.props.extraPayment > 0.0);
+        const showextraPrincipalPayment = this.props.enableRollingPayments || (this.props.extraPrincipalPayment > 0.0);
         const currentPaymentDate = SimpleDate.thisMonth();
 
         return (
@@ -775,8 +694,8 @@ class DebtPayoffSchedule extends Component {
                         <Table.HeaderCell>Beginning Balance</Table.HeaderCell>
                         <Table.HeaderCell>Interest</Table.HeaderCell>
                         <Table.HeaderCell>Principal</Table.HeaderCell>
+                        <Table.HeaderCell>Extra Payment</Table.HeaderCell>
                         <Table.HeaderCell>Payment</Table.HeaderCell>
-                        { showExtraPayment && <Table.HeaderCell>Extra Payment</Table.HeaderCell> }
                         <Table.HeaderCell>Ending Balance</Table.HeaderCell>
                     </Table.Row>
                 </Table.Header>
@@ -784,7 +703,8 @@ class DebtPayoffSchedule extends Component {
                     {
                         this.props.amortization.map((payment) =>
                             <DebtPayment key={payment.paymentNumber} current={payment.paymentDate === currentPaymentDate}
-                                showExtraPayment={showExtraPayment} {...payment} />
+                                editMode={this.state.editedPayment === payment.paymentDate} onEnableEditMode={this.props.enableEditMode && this.handleEnableEditMode}
+                                onEdit={this.handleEdit} showextraPrincipalPayment={showextraPrincipalPayment} {...payment} />
                         )
                     }
                 </Table.Body>
@@ -793,20 +713,104 @@ class DebtPayoffSchedule extends Component {
     }
 }
 
-function DebtPayment(props) {
+class DebtPayment extends Component {
+    constructor(props) {
+        super(props);
+
+        this.state = {
+            newExtraPrincipalPayment: this.props.extraPrincipalPayment
+        }
+
+        this.handlePaymentClick = this.handlePaymentClick.bind(this);
+        this.handleSaveClick = this.handleSaveClick.bind(this);
+        this.handleCancelClick = this.handleCancelClick.bind(this);
+        this.handleChange = this.handleChange.bind(this);
+    }
+
+    handlePaymentClick(e) {
+        if (this.props.onEnableEditMode) {
+            if (e.target.tagName === 'TD') {
+                const editMode = this.props.editMode;
+
+                if (!editMode) {
+                    this.props.onEnableEditMode(e, { paymentDate: this.props.paymentDate });
+                }
+            }
+        }
+    }
+
+    handleSaveClick(e) {
+        const newExtraPrincipalPayment = this.state.newExtraPrincipalPayment;
+
+        if (newExtraPrincipalPayment >= 0) {
+            this.props.onEdit(e, { paymentDate: this.props.paymentDate, newExtraPrincipalPayment: newExtraPrincipalPayment });
+        } else {
+            // TODO:  Throw error
+        }
+    }
+
+    handleCancelClick(e) {
+        this.props.onEdit(e, { paymentDate: this.props.paymentDate, newExtraPrincipalPayment: undefined });
+    }
+
+    handleChange(e, data) {
+        if (data.type === "number") {
+            const newExtraPrincipalPayment = parseFloat(data.value);
+
+            if (newExtraPrincipalPayment >= 0) {
+                this.setState({
+                    newExtraPrincipalPayment: newExtraPrincipalPayment
+                });
+            } else {
+                // TODO:  Throw error
+            }
+        }
+    }
+
+    render() {
+        let totalExtraPrincipalPayment = null;
+
+        if (this.props.editMode) {
+            totalExtraPrincipalPayment = <CurrencyInput name="totalPayment" defaultValue={this.props.extraPrincipalPayment} onChange={this.handleChange}>
+                <Button color="green" icon onClick={this.handleSaveClick}>
+                    <Icon name="check" />
+                </Button>
+                <Button color="red" icon onClick={this.handleCancelClick}>
+                    <Icon name="cancel" />
+                </Button>
+            </CurrencyInput>;
+        } else {
+            totalExtraPrincipalPayment = <CurrencyFormatter value={this.props.extraPrincipalPayment} />;
+        }
+
+        return (
+            <Table.Row className={this.props.current ? "currentPaymentRow" : ""}>
+                <Table.Cell>
+                    {(this.props.current && (<Label ribbon>Current</Label>)) || this.props.paymentNumber}
+                </Table.Cell>
+                <Table.Cell><SimpleDateFormatter value={this.props.paymentDate} /></Table.Cell>
+                <Table.Cell><CurrencyFormatter value={this.props.beginningBalance} /></Table.Cell>
+                <Table.Cell><CurrencyFormatter value={this.props.interest} /></Table.Cell>
+                <Table.Cell><CurrencyFormatter value={this.props.principal} /></Table.Cell>
+                <Table.Cell onClick={this.handlePaymentClick}>{totalExtraPrincipalPayment}</Table.Cell>
+                <Table.Cell><CurrencyFormatter value={this.props.totalPayment} /></Table.Cell>
+                <Table.Cell><CurrencyFormatter value={this.props.endingBalance} /></Table.Cell>
+            </Table.Row>
+        );
+    }
+}
+
+function EditableInput(props) {
     return (
-        <Table.Row className={props.current ? "currentPaymentRow" : ""}>
-            <Table.Cell>
-                {(props.current && (<Label ribbon>Current</Label>)) || props.paymentNumber}
-            </Table.Cell>
-            <Table.Cell><SimpleDateFormatter value={props.paymentDate} /></Table.Cell>
-            <Table.Cell><CurrencyFormatter value={props.beginningBalance} /></Table.Cell>
-            <Table.Cell><CurrencyFormatter value={props.interest} /></Table.Cell>
-            <Table.Cell><CurrencyFormatter value={props.principal} /></Table.Cell>
-            <Table.Cell><CurrencyFormatter value={props.totalPayment} /></Table.Cell>
-            { props.showExtraPayment && <Table.Cell><CurrencyFormatter value={props.extraPayment} /></Table.Cell> }
-            <Table.Cell><CurrencyFormatter value={props.endingBalance} /></Table.Cell>
-        </Table.Row>
+        <Input type='text' defaultValue={props.children} action>
+            <input />
+            <Button color="green" icon>
+                <Icon name="check" />    
+            </Button>
+            <Button color="red" icon>
+                <Icon name="cancel" />
+            </Button>
+        </Input>
     );
 }
 
